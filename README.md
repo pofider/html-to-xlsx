@@ -1,5 +1,5 @@
 #phantom-html-to-pdf
-[![Build Status](https://travis-ci.org/pofider/phantom-html-to-pdf.png?branch=master)](https://travis-ci.org/pofider/phantom-html-to-pdf)
+[![Build Status](https://travis-ci.org/pofider/html-to-xlsx.png?branch=master)](https://travis-ci.org/pofider/html-to-xlsx)
 
 > **node.js phantom wrapper for converting html to pdf in scale**
 
