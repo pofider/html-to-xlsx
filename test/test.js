@@ -4,10 +4,12 @@ var should = require("should"),
     tmpDir = path.join(__dirname, "temp"),
     phantom = require("phantom-workers")({
         tmpDir: tmpDir,
+        numberOfWorkers: 1,
         pathToPhantomScript: path.join(__dirname, "../", "lib", "phantomScript.js")
     }),
     conversion = require("../lib/conversion.js")({
-        tmpDir: tmpDir
+        tmpDir: tmpDir,
+        numberOfWorkers: 1
     });
 
 describe("html extraction", function () {
@@ -18,7 +20,11 @@ describe("html extraction", function () {
 
             done();
         });
-    })
+    });
+
+    afterEach(function () {
+        phantom.kill();
+    });
 
     it("should build simple table", function (done) {
         phantom.execute("<table><tr><td>1</td></tr></table>", function (err, table) {
