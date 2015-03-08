@@ -53,7 +53,7 @@ describe("html extraction", function () {
             if (err)
                 return cb(err);
 
-            table.rows[0][0].foregroundColor[0].should.be.eql('255');
+            table.rows[0][0].foregroundColor[0].should.be.ok;
             done();
         });
     });
@@ -63,7 +63,7 @@ describe("html extraction", function () {
             if (err)
                 return cb(err);
 
-            table.rows[0][0].fontSize.should.be.eql('19px');
+            table.rows[0][0].fontSize.should.be.ok;
             done();
         });
     });
