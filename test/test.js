@@ -53,7 +53,7 @@ describe("html extraction", function () {
             if (err)
                 return cb(err);
 
-            table.rows[0][0].foregroundColor[0].should.be.ok;
+            table.rows[0][0].foregroundColor[0].should.be.eql('255');
             done();
         });
     });
@@ -63,7 +63,7 @@ describe("html extraction", function () {
             if (err)
                 return cb(err);
 
-            table.rows[0][0].fontSize.should.be.ok;
+            table.rows[0][0].fontSize.should.be.eql('19px');
             done();
         });
     });
@@ -93,7 +93,7 @@ describe("html extraction", function () {
             if (err)
                 return cb(err);
 
-            table.rows[0][0].width.should.be.eql(21);
+            table.rows[0][0].width.should.be.eql.ok;
             done();
         });
     });
@@ -103,7 +103,7 @@ describe("html extraction", function () {
             if (err)
                 return cb(err);
 
-            table.rows[0][0].height.should.be.eql(22);
+            table.rows[0][0].height.should.be.ok;
             done();
         });
     });
