@@ -14,10 +14,19 @@ conversion("<table><tr><td>cell value</td></tr></table>" }, function(err, stream
 ```
 
 ##Supported properties
+- `background-color` - cell background color
+- `color` - cell foreground color
+- `border-left-style` - as well as positions will be transformed into excel cells borders
+- `text-align` - text horizontal align in the excel cell
+- `vertical-align` - vertical align in the excel cell
+- `width` - the excel column will get the highest width, it can be little bit inaccurate because of pixel to excel points conversion
+- `height` - the excel row will get the highest height
+- `font-size` - font size
+
 
 ##Options
 ```js
-var conversion = require("phantom-html-to-pdf")({
+var conversion = require("html-to-xlsx")({
     /* number of allocated phantomjs processes */
 	numberOfWorkers: 2,
 	/* timeout in ms for html conversion, when the timeout is reached, the phantom process is recycled */
@@ -28,4 +37,4 @@ var conversion = require("phantom-html-to-pdf")({
 ```
 
 ##License
-See [license](https://github.com/pofider/phantom-html-to-pdf/blob/master/LICENSE)
+See [license](https://github.com/pofider/html-to-xlsx/blob/master/LICENSE)

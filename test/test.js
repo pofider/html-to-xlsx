@@ -142,7 +142,7 @@ describe("phantom html to pdf", function () {
     rmDir = function (dirPath) {
         if (!fs.exists(dirPath))
             fs.mkdir(dirPath);
-        
+
         try {
             var files = fs.readdirSync(dirPath);
         }
