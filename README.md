@@ -1,6 +1,6 @@
 #html-to-xlsx
 [![NPM Version](http://img.shields.io/npm/v/html-to-xlsx.svg?style=flat-square)](https://npmjs.com/package/html-to-xlsx)
-[![License](http://img.shields.io/npm/l/html-to-xlsx?style=flat-square)](http://opensource.org/licenses/MIT)
+[![License](http://img.shields.io/npm/l/html-to-xlsx.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 [![Build Status](https://travis-ci.org/pofider/html-to-xlsx.png?branch=master)](https://travis-ci.org/pofider/html-to-xlsx)
 
 **node.js html to xlsx transformation**
