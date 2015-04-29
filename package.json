@@ -18,7 +18,7 @@
     "url": "git@github.com:pofider/html-to-xlsx.git"
   },
   "dependencies": {
-    "phantom-workers": "*",
+    "phantom-workers": "0.2.0",
     "msexcel-builder-extended": "0.0.2",
     "uuid": "2.0.1"
   },

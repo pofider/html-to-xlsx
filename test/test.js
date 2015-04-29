@@ -123,7 +123,7 @@ describe("html extraction", function () {
     });
 });
 
-describe("phantom html to pdf", function () {
+describe("html to xlsx conversion in phantom", function () {
 
     beforeEach(function () {
         rmDir(tmpDir);
@@ -140,8 +140,8 @@ describe("phantom html to pdf", function () {
     });
 
     rmDir = function (dirPath) {
-        if (!fs.exists(dirPath))
-            fs.mkdir(dirPath);
+        if (!fs.existsSync(dirPath))
+            fs.mkdirSync(dirPath);
 
         try {
             var files = fs.readdirSync(dirPath);
