@@ -125,19 +125,31 @@ describe("html extraction", function () {
 
 describe("html to xlsx conversion in phantom", function () {
 
-    beforeEach(function () {
-        rmDir(tmpDir);
+    describe("phantom-server", function () {
+        common("phantom-server");
     });
 
-    it("should not fail", function (done) {
-        conversion("<table><tr><td>hello</td></tr>", function (err, res) {
-            if (err)
-                return done(err);
+    describe("dedicated-process", function () {
+        common("dedicated-process");
+    });
 
-            res.should.have.property("readable");
-            done();
+    function common(strategy) {
+
+        beforeEach(function () {
+            rmDir(tmpDir);
+            conversion.strategy = strategy;
         });
-    });
+
+        it("should not fail", function (done) {
+            conversion("<table><tr><td>hello</td></tr>", function (err, res) {
+                if (err)
+                    return done(err);
+
+                res.should.have.property("readable");
+                done();
+            });
+        });
+    }
 
     rmDir = function (dirPath) {
         if (!fs.existsSync(dirPath))
