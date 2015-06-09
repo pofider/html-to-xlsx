@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "phantom-workers": "0.2.0",
+    "phantomjs": "1.9.15",
     "msexcel-builder-extended": "0.0.2",
     "uuid": "2.0.1"
   },

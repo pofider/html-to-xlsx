@@ -137,7 +137,7 @@ describe("html to xlsx conversion in phantom", function () {
 
         beforeEach(function () {
             rmDir(tmpDir);
-            conversion.strategy = strategy;
+            conversion.options.strategy = strategy;
         });
 
         it("should not fail", function (done) {
