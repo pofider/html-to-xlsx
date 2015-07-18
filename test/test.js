@@ -2,8 +2,8 @@ var should = require("should"),
     path = require("path"),
     fs = require("fs"),
     tmpDir = path.join(__dirname, "temp"),
-    phantomServerStrategy = require("../lib/phantomWebServerStrategy.js"),
-    dedicatedProcessStrategy = require("../lib/phantomScriptStrategy.js");
+    phantomServerStrategy = require("../lib/serverStrategy.js"),
+    dedicatedProcessStrategy = require("../lib/dedicatedProcessStrategy.js");
 
 describe("html extraction", function () {
     options = {
