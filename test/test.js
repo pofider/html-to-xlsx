@@ -128,6 +128,21 @@ describe("html extraction", function () {
                 done();
             });
         });
+
+        it("should work for long tables", function (done) {
+            this.timeout(7000);
+            var rows = "";
+            for (var i = 0; i < 10000; i++) {
+                rows += "<tr><td>1</td></tr>"
+            }
+            strategy(options, "<table>" + rows + "</table>", "", function (err, table) {
+                if (err)
+                    return done(err);
+
+                table.rows.should.have.length(10000);
+                done();
+            });
+        });
     }
 });
 
