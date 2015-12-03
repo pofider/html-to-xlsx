@@ -179,6 +179,15 @@ describe("html to xlsx conversion in phantom", function () {
                 done();
             });
         });
+
+        it("should callback error when input contains invalid characters", function (done) {
+            conversion("<table><tr><td></td></tr></table>", function (err, res) {
+                if (err)
+                    return done();
+
+                done(new Error('Should have failed'));
+            });
+        });
     }
 
     rmDir = function (dirPath) {
@@ -194,8 +203,12 @@ describe("html to xlsx conversion in phantom", function () {
         if (files.length > 0)
             for (var i = 0; i < files.length; i++) {
                 var filePath = dirPath + '/' + files[i];
-                if (fs.statSync(filePath).isFile())
-                    fs.unlinkSync(filePath);
+                try {
+                    if (fs.statSync(filePath).isFile()) {
+                        fs.unlinkSync(filePath);
+                    }
+                }
+                catch(e) { }
             }
     };
 });
