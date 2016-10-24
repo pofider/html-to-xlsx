@@ -143,6 +143,17 @@ describe("html extraction", function () {
                 done();
             });
         });
+
+        it("should parse colspan", function (done) {
+            strategy(options, "<table><tr><td colspan='6'></td><td>>Column 7</td></tr></table>", "", function (err, table) {
+                if (err)
+                    return done(err);
+
+                console.log(JSON.stringify(table));
+                table.rows[0][0].colspan.should.be.eql(6);
+                done();
+            });
+        });
     }
 });
 
