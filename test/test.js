@@ -145,12 +145,24 @@ describe("html extraction", function () {
         });
 
         it("should parse colspan", function (done) {
-            strategy(options, "<table><tr><td colspan='6'></td><td>>Column 7</td></tr></table>", "", function (err, table) {
+            strategy(options, "<table><tr><td colspan='6'></td><td>Column 7</td></tr></table>", "", function (err, table) {
                 if (err)
                     return done(err);
 
-                console.log(JSON.stringify(table));
                 table.rows[0][0].colspan.should.be.eql(6);
+                table.rows[0][1].value.should.be.eql("Column 7");
+                done();
+            });
+        });
+
+        it("should parse rowspan", function (done) {
+            strategy(options, "<table><tr><td rowspan='2'>Col 1</td><td>Col 2</td></tr></table>", "", function (err, table) {
+                if (err)
+                    return done(err);
+
+                table.rows[0][0].rowspan.should.be.eql(2);
+                table.rows[0][0].value.should.be.eql("Col 1");
+                table.rows[0][1].value.should.be.eql("Col 2");
                 done();
             });
         });
