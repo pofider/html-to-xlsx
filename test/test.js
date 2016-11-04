@@ -22,8 +22,15 @@ describe("html extraction", function () {
         common(dedicatedProcessStrategy);
     });
 
+    describe("dedicated-process use phantomJSPath", function() {
+        common(dedicatedProcessStrategy);
+    });
+
     function common(strategy) {
         it("should build simple table", function (done) {
+          if (strategy === "") {
+            options.phantomJSPath =  path.join(__dirname, "../node_modules/phantomjs/bin/phantomjs");
+          }
             strategy(options, "<table><tr><td>1</td></tr></table>", "", function (err, table) {
                 if (err)
                     return done(err);
