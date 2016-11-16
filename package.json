@@ -26,11 +26,13 @@
   },
   "devDependencies": {
     "mocha": "2.1.0",
-    "should": "5.0.1"
+    "should": "5.0.1",
+    "xlsx": "0.8.0"
   },
   "scripts": {
     "test": "node lib/prepareScripts.js && mocha test/test.js",
-    "prepublish": "in-publish && node lib/prepareScripts.js || not-in-publish"
+    "build": "node lib/prepareScripts.js",
+    "prepublish": "in-publish && npm run build || not-in-publish"
   },
   "main": "index.js",
   "license": "MIT"
