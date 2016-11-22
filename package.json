@@ -31,7 +31,6 @@
   "scripts": {
     "test": "node lib/prepareScripts.js && mocha test/test.js",
     "prepublish": "in-publish && node lib/prepareScripts.js || not-in-publish",
-    "postinstall": "node lib/prepareScripts.js"
   },
   "main": "index.js",
   "license": "MIT"
