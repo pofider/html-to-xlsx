@@ -24,6 +24,8 @@ conversion("<table><tr><td>cell value</td></tr></table>" }, function(err, stream
 - `width` - the excel column will get the highest width, it can be little bit inaccurate because of pixel to excel points conversion
 - `height` - the excel row will get the highest height
 - `font-size` - font size
+- `colspan` - numeric value that merges current column with columns to the right
+- `rowspan` - numeric value that merges current row with rows below.  
 
 
 ##Options
