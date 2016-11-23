@@ -1,6 +1,6 @@
 {
   "name": "html-to-xlsx",
-  "version": "0.5.0",
+  "version": "0.5.2",
   "author": {
     "name": "Jan Blaha",
     "email": "jan.blaha@hotmail.com"
@@ -19,18 +19,20 @@
   },
   "dependencies": {
     "in-publish": "2.0.0",
-    "msexcel-builder-extended": "0.0.2",
+    "msexcel-builder-extended": "0.0.4",
     "phantom-workers": "0.3.1",
     "phantomjs": "1.9.15",
     "uuid": "2.0.1"
   },
   "devDependencies": {
     "mocha": "2.1.0",
-    "should": "5.0.1"
+    "should": "5.0.1",
+    "xlsx": "0.8.0"
   },
   "scripts": {
     "test": "node lib/prepareScripts.js && mocha test/test.js",
-    "prepublish": "in-publish && node lib/prepareScripts.js || not-in-publish",
+    "build": "node lib/prepareScripts.js",
+    "prepublish": "in-publish && npm run build || not-in-publish"
   },
   "main": "index.js",
   "license": "MIT"
