@@ -1,6 +1,7 @@
 var should = require("should"),
     path = require("path"),
     fs = require("fs"),
+    xlsx = require('xlsx'),
     tmpDir = path.join(__dirname, "temp"),
     phantomServerStrategy = require("../lib/serverStrategy.js"),
     dedicatedProcessStrategy = require("../lib/dedicatedProcessStrategy.js");
@@ -216,6 +217,36 @@ describe("html to xlsx conversion in phantom", function () {
                     return done();
 
                 done(new Error('Should have failed'));
+            });
+        });
+
+        it("should be able to parse xlsx", function (done) {
+            conversion("<table><tr><td>hello</td></tr>", function (err, res) {
+                if (err)
+                    return done(err);
+
+                var bufs = [];
+                res.on('data', function(d){ bufs.push(d); });
+                res.on('end', function() {
+                    var buf = Buffer.concat(bufs);
+                    xlsx.read(buf).Strings[0].t.should.be.eql('hello');
+                    done();
+                })
+            });
+        });
+
+        it("should translate ampersands", function (done) {
+            conversion("<table><tr><td>& &</td></tr>", function (err, res) {
+                if (err)
+                    return done(err);
+
+                var bufs = [];
+                res.on('data', function(d){ bufs.push(d); });
+                res.on('end', function() {
+                    var buf = Buffer.concat(bufs);
+                    xlsx.read(buf).Strings[0].t.should.be.eql('& &');
+                    done();
+                })
             });
         });
     }
