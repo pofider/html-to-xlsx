@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "in-publish": "2.0.0",
-    "msexcel-builder-extended": "0.0.4",
+    "msexcel-builder-extended": "0.0.5",
     "phantom-workers": "0.3.1",
     "phantomjs": "1.9.15",
     "uuid": "2.0.1"
@@ -30,7 +30,7 @@
     "xlsx": "0.8.0"
   },
   "scripts": {
-    "test": "node lib/prepareScripts.js && mocha test/test.js",
+    "test": "node lib/prepareScripts.js && mocha --timeout 5000 test/test.js",
     "build": "node lib/prepareScripts.js",
     "prepublish": "in-publish && npm run build || not-in-publish"
   },
