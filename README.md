@@ -1,4 +1,4 @@
-#html-to-xlsx
+# html-to-xlsx
 [![NPM Version](http://img.shields.io/npm/v/html-to-xlsx.svg?style=flat-square)](https://npmjs.com/package/html-to-xlsx)
 [![License](http://img.shields.io/npm/l/html-to-xlsx.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 [![Build Status](https://travis-ci.org/pofider/html-to-xlsx.png?branch=master)](https://travis-ci.org/pofider/html-to-xlsx)
@@ -15,7 +15,7 @@ conversion("<table><tr><td>cell value</td></tr></table>" }, function(err, stream
 });
 ```
 
-##Supported properties
+## Supported properties
 - `background-color` - cell background color
 - `color` - cell foreground color
 - `border-left-style` - as well as positions will be transformed into excel cells borders
@@ -28,7 +28,7 @@ conversion("<table><tr><td>cell value</td></tr></table>" }, function(err, stream
 - `rowspan` - numeric value that merges current row with rows below.  
 
 
-##Options
+## Options
 ```js
 var conversion = require("html-to-xlsx")({
     /* number of allocated phantomjs processes */
@@ -45,5 +45,5 @@ var conversion = require("html-to-xlsx")({
 });
 ```
 
-##License
+## License
 See [license](https://github.com/pofider/html-to-xlsx/blob/master/LICENSE)
