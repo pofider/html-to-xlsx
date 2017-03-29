@@ -173,7 +173,7 @@ describe("html extraction", function () {
                 table.rows[0][1].value.should.be.eql("Col 2");
                 done();
             });
-        });
+        });        
     }
 });
 
@@ -247,6 +247,15 @@ describe("html to xlsx conversion in phantom", function () {
                     xlsx.read(buf).Strings[0].t.should.be.eql('& &');
                     done();
                 })
+            });
+        });
+
+        it("should callback error when row doesn't contain cells", function (done) {         
+            conversion("<table><tr>Hello</tr></table>", function (err, res) {
+                if (err)
+                    return done();
+                
+                done(new Error('It should have callback error'));
             });
         });
     }
