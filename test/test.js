@@ -173,7 +173,24 @@ describe("html extraction", function () {
                 table.rows[0][1].value.should.be.eql("Col 2");
                 done();
             });
-        });        
+        });
+
+        it("should parse complex rowspan", function (done) {
+            strategy(options,
+              "<table><tr><td rowspan='3'>Row 1 Col 1</td><td>Row 1 Col 2</td>" +
+              "<td>Row 1 Col 3</td><td>Row 1 Col 4</td></tr><tr><td rowspan='2'>Row 2 Col 1</td>" +
+              "<td rowspan='2'>Row 2 Col 2</td><td>Row 2 Col 3</td></tr><tr><td>Row 3 Col 3</td>" +
+              "</tr></table>",
+              "", function (err, table) {
+                if (err)
+                    return done(err);
+
+                table.rows[0][0].rowspan.should.be.eql(3);
+                table.rows[0][0].value.should.be.eql("Row 1 Col 1");
+                table.rows[1][1].value.should.be.eql("Row 2 Col 2");
+                done();
+            });
+        });
     }
 });
 
@@ -250,11 +267,11 @@ describe("html to xlsx conversion in phantom", function () {
             });
         });
 
-        it("should callback error when row doesn't contain cells", function (done) {         
+        it("should callback error when row doesn't contain cells", function (done) {
             conversion("<table><tr>Hello</tr></table>", function (err, res) {
                 if (err)
                     return done();
-                
+
                 done(new Error('It should have callback error'));
             });
         });
