@@ -18,13 +18,13 @@
     "url": "git@github.com:pofider/html-to-xlsx.git"
   },
   "dependencies": {
-    "in-publish": "2.0.0",
     "msexcel-builder-extended": "0.0.7",
     "phantom-workers": "0.4.2",
     "phantomjs": "1.9.17",
     "uuid": "2.0.1"
   },
   "devDependencies": {
+    "in-publish": "2.0.0",
     "mocha": "2.1.0",
     "should": "5.0.1",
     "xlsx": "0.8.0"
