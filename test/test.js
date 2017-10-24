@@ -127,6 +127,16 @@ describe("html extraction", function () {
             });
         });
 
+        it("should parse overflow", function (done) {
+            strategy(options, "<table><tr><td style='overflow:scroll;'>1234567789012345678912457890</td></tr></table>", "", function (err, table) {
+                if (err)
+                    return done(err);
+
+                table.rows[0][0].wrapText.should.be.eql('scroll');
+                done();
+            });
+        });
+
         it("should parse backgroud color from styles with line endings", function (done) {
             strategy(options, "<style> td { \n background-color: red \n } </style><table><tr><td>1</td></tr></table>", "", function (err, table) {
                 if (err)
