@@ -5,7 +5,7 @@
 
 **node.js html to xlsx transformation**
 
-Transformation only supports html table and several basic style properties. No images or charts are currently supported. 
+Transformation only supports html table and several basic style properties. No images or charts are currently supported.
 
 ```js
 var conversion = require("html-to-xlsx")();
@@ -32,18 +32,29 @@ conversion("<table><tr><td>cell value</td></tr></table>" }, function(err, stream
 ## Options
 ```js
 var conversion = require("html-to-xlsx")({
-    /* number of allocated phantomjs processes */
+  /* use rather dedicated process for every phantom printing,
+	  "dedicated-process" strategy is quite slower but can solve some bugs
+	  with corporate proxy, default is "phantom-server" */
+  strategy: 'phantom-server', // 'dedicated-process' or 'phantom-server'
+  /* number of allocated phantomjs processes */
 	numberOfWorkers: 2,
 	/* timeout in ms for html conversion, when the timeout is reached, the phantom process is recycled */
 	timeout: 5000,
 	/* directory where are stored temporary html and pdf files, use something like npm package reaper to clean this up */
 	tmpDir: "os/tmpdir",
 	/* optional port range where to start phantomjs server */
-    portLeftBoundary: 1000,
-    portRightBoundary: 2000,
-    /* optional hostname where to start phantomjs server */
-    host: '127.0.0.1'
+  portLeftBoundary: 1000,
+  portRightBoundary: 2000,
+  /* optional hostname where to start phantomjs server */
+  host: '127.0.0.1'
 });
+```
+
+## Kill workers
+
+```js
+// kill all phantomjs workers when using phantom-server strategy
+conversion.kill();
 ```
 
 ## License
