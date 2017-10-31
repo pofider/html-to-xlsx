@@ -238,6 +238,17 @@ describe("html to xlsx conversion in phantom", function () {
             });
         });
 
+        // enable this test when we have a fix for #21
+        it.skip("should not fail when last cell of a row has rowspan", function (done) {
+            conversion("<table><tr><td rowspan=\"2\">Cell RowSpan</td></tr><tr><td>Foo</td></tr></table>", function (err, res) {
+                if (err)
+                    return done(err);
+
+                res.should.have.property("readable");
+                done();
+            });
+        })
+
         it("should callback error when input contains invalid characters", function (done) {
             conversion("<table><tr><td></td></tr></table>", function (err, res) {
                 if (err)
