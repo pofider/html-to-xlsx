@@ -5,7 +5,9 @@
     "name": "Jan Blaha",
     "email": "jan.blaha@hotmail.com"
   },
-  "contributors": [],
+  "contributors": [
+    "BJR Matos <bjrmatos@gmail.com> (https://github.com/bjrmatos)"
+  ],
   "description": "Convert html to xlsx",
   "keywords": [
     "html",
@@ -17,23 +19,36 @@
     "type": "git",
     "url": "git@github.com:pofider/html-to-xlsx.git"
   },
+  "license": "MIT",
+  "main": "index.js",
+  "engines": {
+    "node": ">=8.0"
+  },
+  "standard": {
+    "parser": "babel-eslint",
+    "env": {
+      "node": true,
+      "mocha": true
+    }
+  },
   "dependencies": {
     "msexcel-builder-extended": "0.0.7",
-    "phantom-workers": "0.4.2",
-    "phantomjs": "1.9.17",
-    "uuid": "2.0.1"
+    "uuid": "3.2.1"
   },
   "devDependencies": {
-    "in-publish": "2.0.0",
-    "mocha": "2.1.0",
-    "should": "5.0.1",
-    "xlsx": "0.8.0"
+    "babel-eslint": "8.2.2",
+    "chrome-page-eval": "github:bjrmatos/chrome-page-eval",
+    "eslint": "4.18.2",
+    "eslint-plugin-babel": "4.1.2",
+    "mocha": "5.0.2",
+    "phantom-page-eval": "github:bjrmatos/phantom-page-eval",
+    "phantomjs": "1.9.17",
+    "puppeteer": "1.0.0",
+    "should": "13.2.1",
+    "standard": "11.0.0",
+    "xlsx": "0.12.4"
   },
   "scripts": {
-    "test": "node lib/prepareScripts.js && mocha --timeout 5000 test/test.js",
-    "build": "node lib/prepareScripts.js",
-    "prepublish": "in-publish && npm run build || not-in-publish"
-  },
-  "main": "index.js",
-  "license": "MIT"
+    "test": "mocha --timeout 5000 test/test.js && standard"
+  }
 }

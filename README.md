@@ -3,16 +3,26 @@
 [![License](http://img.shields.io/npm/l/html-to-xlsx.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 [![Build Status](https://travis-ci.org/pofider/html-to-xlsx.png?branch=master)](https://travis-ci.org/pofider/html-to-xlsx)
 
-**node.js html to xlsx transformation**
+> **node.js html to xlsx transformation**
 
 Transformation only supports html table and several basic style properties. No images or charts are currently supported.
 
+## Usage
+
 ```js
-var conversion = require("html-to-xlsx")();
-conversion("<table><tr><td>cell value</td></tr></table>" }, function(err, stream){
-  //readable stream to xlsx file
-  stream.pipe(res);
-});
+const fs = require('fs')
+const conversionFactory = require('html-to-xlsx')
+const puppeteer = require('puppeteer')
+const chromeEval = require('chrome-page-eval')({ puppeteer })
+const conversion = conversionFactory({
+  extract: chromeEval
+})
+
+(async () => {
+  const stream = await conversion(`<table><tr><td>cell value</td></tr></table>`)
+
+  stream.pipe(fs.createWriteStream('/path/to/output.xlsx'))
+})()
 ```
 
 ## Supported properties
@@ -28,34 +38,45 @@ conversion("<table><tr><td>cell value</td></tr></table>" }, function(err, stream
 - `rowspan` - numeric value that merges current row with rows below.  
 - `overflow` - the excel cell will have text wrap enabled if this is set to scoll.
 
-
-## Options
-```js
-var conversion = require("html-to-xlsx")({
-  /* use rather dedicated process for every phantom printing,
-	  "dedicated-process" strategy is quite slower but can solve some bugs
-	  with corporate proxy, default is "phantom-server" */
-  strategy: 'phantom-server', // 'dedicated-process' or 'phantom-server'
-  /* number of allocated phantomjs processes */
-	numberOfWorkers: 2,
-	/* timeout in ms for html conversion, when the timeout is reached, the phantom process is recycled */
-	timeout: 5000,
-	/* directory where are stored temporary html and pdf files, use something like npm package reaper to clean this up */
-	tmpDir: "os/tmpdir",
-	/* optional port range where to start phantomjs server */
-  portLeftBoundary: 1000,
-  portRightBoundary: 2000,
-  /* optional hostname where to start phantomjs server */
-  host: '127.0.0.1'
-});
-```
-
-## Kill workers
+## Constructor options
 
 ```js
-// kill all phantomjs workers when using phantom-server strategy
-conversion.kill();
+const conversionFactory = require('html-to-xlsx')
+const puppeteer = require('puppeteer')
+const chromeEval = require('chrome-page-eval')({ puppeteer })
+const conversion = conversionFactory({ /*[constructor options here]*/})
 ```
+
+- `extract` **function** **[required]** - a function that receives some input (an html file path and a script) and should return some data after been evaluated the html passed. the input that the function receives is:
+  ```js
+  {
+    html: <file path to a html file>,
+    scriptFn: <string that contains a javascript function to evaluate in the html>,
+    timeout: <time in ms to wait for the function to complete, the function should use this value to abort any execution when the time has passed>,
+    /*options passed to `conversion` will be propagated to the input of this function too*/
+  }
+  ```
+- `tmpDir` **string** - the directory path that the module is going to use to save temporary files needed during the conversion. defaults to [`require('os').tmpdir()`](https://nodejs.org/dist/latest-v8.x/docs/api/os.html#os_os_tmpdir)
+- `timeout` **number** - time in ms to wait for the conversion to complete, when the timeout is reached the conversion is cancelled. defaults to `10000`
+
+## Conversion options
+
+```js
+const fs = require('fs')
+const conversionFactory = require('html-to-xlsx')
+const puppeteer = require('puppeteer')
+const chromeEval = require('chrome-page-eval')({ puppeteer })
+const conversion = conversionFactory({
+  extract: chromeEval
+})
+
+(async () => {
+  const stream = await conversion(/* html */, /* extract options */)
+})()
+```
+
+- `html` **string** - the html source that will be transformed to an xlsx, the html should contain a table element
+- `extractOptions` **object** - additional options to pass to the specified `extract` function
 
 ## License
 See [license](https://github.com/pofider/html-to-xlsx/blob/master/LICENSE)

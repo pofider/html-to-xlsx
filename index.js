@@ -1,1 +1,3 @@
-module.exports = require("./lib/conversion.js");
+'use strict'
+
+module.exports = require('./lib/conversion.js')
