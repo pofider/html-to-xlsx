@@ -1,322 +1,315 @@
-var should = require("should"),
-    path = require("path"),
-    fs = require("fs"),
-    xlsx = require('xlsx'),
-    tmpDir = path.join(__dirname, "temp"),
-    phantomServerStrategy = require("../lib/serverStrategy.js"),
-    dedicatedProcessStrategy = require("../lib/dedicatedProcessStrategy.js");
+require('should')
+const util = require('util')
+const path = require('path')
+const fs = require('fs')
+const uuid = require('uuid/v4')
+const xlsx = require('xlsx')
+const chromePageEval = require('chrome-page-eval')
+const phantomPageEval = require('phantom-page-eval')
+const puppeteer = require('puppeteer')
+const phantomPath = require('phantomjs').path
+const tmpDir = path.join(__dirname, 'temp')
 
-describe("html extraction", function () {
-    options = {
-        tmpDir: tmpDir
-    };
+const writeFileAsync = util.promisify(fs.writeFile)
 
-    beforeEach(function() {
-        rmDir(tmpDir);
+const extractTableScriptFn = fs.readFileSync(
+  path.join(__dirname, '../lib/scripts/conversionScript.js')
+).toString()
+
+const chromeEval = chromePageEval({
+  puppeteer
+})
+
+const phantomEval = phantomPageEval({
+  phantomPath,
+  tmpDir,
+  clean: false
+})
+
+async function createHtmlFile (html) {
+  const outputPath = path.join(tmpDir, `${uuid()}.html`)
+
+  await writeFileAsync(outputPath, html)
+
+  return outputPath
+}
+
+function rmDir (dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath)
+  }
+
+  let files
+
+  try {
+    files = fs.readdirSync(dirPath)
+  } catch (e) {
+    return
+  }
+
+  if (files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      let filePath = `${dirPath}/${files[i]}`
+
+      try {
+        if (fs.statSync(filePath).isFile()) {
+          fs.unlinkSync(filePath)
+        }
+      } catch (e) { }
+    }
+  }
+}
+
+describe('html extraction', () => {
+  beforeEach(() => {
+    rmDir(tmpDir)
+  })
+
+  describe('chrome-strategy', () => {
+    common(chromeEval)
+  })
+
+  describe('phantom-strategy', () => {
+    common(phantomEval)
+  })
+
+  function common (pageEval) {
+    it('should build simple table', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows.should.have.length(1)
+      table.rows[0].should.have.length(1)
+      table.rows[0][0].value.should.be.eql('1')
     })
 
-    describe("phantom-server", function() {
-       common(phantomServerStrategy);
-    });
+    it('should parse backgroud color', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='background-color:red'>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-    describe("dedicated-process", function() {
-        common(dedicatedProcessStrategy);
-    });
+      table.rows[0][0].backgroundColor[0].should.be.eql('255')
+    })
 
-    describe("dedicated-process use phantomJSPath", function() {
-        common(dedicatedProcessStrategy);
-    });
+    it('should parse foregorund color', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='color:red'>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-    function common(strategy) {
-        it("should build simple table", function (done) {
-          if (strategy === "") {
-            options.phantomJSPath =  path.join(__dirname, "../node_modules/phantomjs/bin/phantomjs");
-          }
-            strategy(options, "<table><tr><td>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].foregroundColor[0].should.be.eql('255')
+    })
 
-                table.rows.should.have.length(1);
-                table.rows[0].should.have.length(1);
-                table.rows[0][0].value.should.be.eql('1');
-                done();
-            });
-        });
+    it('should parse fontsize', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='font-size:19px'>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse backgroud color", function (done) {
-            strategy(options, "<table><tr><td style='background-color:red'>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].fontSize.should.be.eql('19px')
+    })
 
-                table.rows[0][0].backgroundColor[0].should.be.eql('255');
-                done();
-            });
-        });
+    it('should parse verticalAlign', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='vertical-align:bottom'>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse foregorund color", function (done) {
-            strategy(options, "<table><tr><td style='color:red'>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].verticalAlign.should.be.eql('bottom')
+    })
 
-                table.rows[0][0].foregroundColor[0].should.be.eql('255');
-                done();
-            });
-        });
+    it('should parse horizontal align', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='text-align:left'>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse fontsize", function (done) {
-            strategy(options, "<table><tr><td style='font-size:19px'>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].horizontalAlign.should.be.eql('left')
+    })
 
-                table.rows[0][0].fontSize.should.be.eql('19px');
-                done();
-            });
-        });
+    it('should parse width', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='width:19px'>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse verticalAlign", function (done) {
-            strategy(options, "<table><tr><td style='vertical-align:bottom'>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].width.should.be.ok()
+    })
 
-                table.rows[0][0].verticalAlign.should.be.eql('bottom');
-                done();
-            });
-        });
+    it('should parse height', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='height:19px'>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse horizontal align", function (done) {
-            strategy(options, "<table><tr><td style='text-align:left'>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].height.should.be.ok()
+    })
 
-                table.rows[0][0].horizontalAlign.should.be.eql('left');
-                done();
-            });
-        });
+    it('should parse border', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='border-style:solid;'>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse width", function (done) {
-            strategy(options, "<table><tr><td style='width:19px'>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].border.left.should.be.eql('solid')
+      table.rows[0][0].border.right.should.be.eql('solid')
+      table.rows[0][0].border.bottom.should.be.eql('solid')
+      table.rows[0][0].border.top.should.be.eql('solid')
+    })
 
-                table.rows[0][0].width.should.be.eql.ok;
-                done();
-            });
-        });
+    it('should parse overflow', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td style='overflow:scroll;'>1234567789012345678912457890</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse height", function (done) {
-            strategy(options, "<table><tr><td style='height:19px'>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].wrapText.should.be.eql('scroll')
+    })
 
-                table.rows[0][0].height.should.be.ok;
-                done();
-            });
-        });
+    it('should parse backgroud color from styles with line endings', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<style> td { \n background-color: red \n } </style><table><tr><td>1</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse border", function (done) {
-            strategy(options, "<table><tr><td style='border-style:solid;'>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].backgroundColor[0].should.be.eql('255')
+    })
 
+    it('should work for long tables', async function () {
+      this.timeout(7000)
 
-                table.rows[0][0].border.left.should.be.eql('solid');
-                table.rows[0][0].border.right.should.be.eql('solid');
-                table.rows[0][0].border.bottom.should.be.eql('solid');
-                table.rows[0][0].border.top.should.be.eql('solid');
-                done();
-            });
-        });
+      let rows = ''
 
-        it("should parse overflow", function (done) {
-            strategy(options, "<table><tr><td style='overflow:scroll;'>1234567789012345678912457890</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      for (let i = 0; i < 10000; i++) {
+        rows += '<tr><td>1</td></tr>'
+      }
 
-                table.rows[0][0].wrapText.should.be.eql('scroll');
-                done();
-            });
-        });
+      const table = await pageEval({
+        html: await createHtmlFile(`<table>${rows}</table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse backgroud color from styles with line endings", function (done) {
-            strategy(options, "<style> td { \n background-color: red \n } </style><table><tr><td>1</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows.should.have.length(10000)
+    })
 
-                table.rows[0][0].backgroundColor[0].should.be.eql('255');
-                done();
-            });
-        });
+    it('should parse colspan', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td colspan='6'></td><td>Column 7</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should work for long tables", function (done) {
-            this.timeout(7000);
-            var rows = "";
-            for (var i = 0; i < 10000; i++) {
-                rows += "<tr><td>1</td></tr>"
-            }
-            strategy(options, "<table>" + rows + "</table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].colspan.should.be.eql(6)
+      table.rows[0][1].value.should.be.eql('Column 7')
+    })
 
-                table.rows.should.have.length(10000);
-                done();
-            });
-        });
+    it('should parse rowspan', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`<table><tr><td rowspan='2'>Col 1</td><td>Col 2</td></tr></table>`),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse colspan", function (done) {
-            strategy(options, "<table><tr><td colspan='6'></td><td>Column 7</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].rowspan.should.be.eql(2)
+      table.rows[0][0].value.should.be.eql('Col 1')
+      table.rows[0][1].value.should.be.eql('Col 2')
+    })
 
-                table.rows[0][0].colspan.should.be.eql(6);
-                table.rows[0][1].value.should.be.eql("Column 7");
-                done();
-            });
-        });
+    it('should parse complex rowspan', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td rowspan='3'>Row 1 Col 1</td><td>Row 1 Col 2</td>
+              <td>Row 1 Col 3</td><td>Row 1 Col 4</td>
+            </tr>
+            <tr>
+              <td rowspan='2'>Row 2 Col 1</td>
+              <td rowspan='2'>Row 2 Col 2</td><td>Row 2 Col 3</td>
+            </tr>
+            <tr>
+              <td>Row 3 Col 3</td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
 
-        it("should parse rowspan", function (done) {
-            strategy(options, "<table><tr><td rowspan='2'>Col 1</td><td>Col 2</td></tr></table>", "", function (err, table) {
-                if (err)
-                    return done(err);
+      table.rows[0][0].rowspan.should.be.eql(3)
+      table.rows[0][0].value.should.be.eql('Row 1 Col 1')
+      table.rows[1][1].value.should.be.eql('Row 2 Col 2')
+    })
+  }
+})
 
-                table.rows[0][0].rowspan.should.be.eql(2);
-                table.rows[0][0].value.should.be.eql("Col 1");
-                table.rows[0][1].value.should.be.eql("Col 2");
-                done();
-            });
-        });
+describe('html to xlsx conversion with strategy', () => {
+  describe('chrome-strategy', () => {
+    commonConversion(chromeEval)
+  })
+  describe('phantom-strategy', () => {
+    commonConversion(phantomEval)
+  })
 
-        it("should parse complex rowspan", function (done) {
-            strategy(options,
-              "<table><tr><td rowspan='3'>Row 1 Col 1</td><td>Row 1 Col 2</td>" +
-              "<td>Row 1 Col 3</td><td>Row 1 Col 4</td></tr><tr><td rowspan='2'>Row 2 Col 1</td>" +
-              "<td rowspan='2'>Row 2 Col 2</td><td>Row 2 Col 3</td></tr><tr><td>Row 3 Col 3</td>" +
-              "</tr></table>",
-              "", function (err, table) {
-                if (err)
-                    return done(err);
+  function commonConversion (pageEval) {
+    let conversion
 
-                table.rows[0][0].rowspan.should.be.eql(3);
-                table.rows[0][0].value.should.be.eql("Row 1 Col 1");
-                table.rows[1][1].value.should.be.eql("Row 2 Col 2");
-                done();
-            });
-        });
-    }
-});
+    beforeEach(function () {
+      rmDir(tmpDir)
 
+      conversion = require('../')({
+        tmpDir: tmpDir,
+        extract: pageEval
+      })
+    })
 
-describe("html to xlsx conversion in phantom", function () {
+    it('should not fail', async () => {
+      const stream = await conversion('<table><tr><td>hello</td></tr>')
 
-    describe("phantom-server", function () {
-        commonConversion("phantom-server");
-    });
+      stream.should.have.property('readable')
+    })
 
-    describe("dedicated-process", function () {
-        commonConversion("dedicated-process");
-    });
+    // enable this test when we have a fix for #21
+    it.skip('should not fail when last cell of a row has rowspan', async () => {
+      const stream = await conversion('<table><tr><td>hello</td></tr>')
 
-    function commonConversion(strategyName) {
+      stream.should.have.property('readable')
+    })
 
-        var conversion;
+    it('should callback error when input contains invalid characters', async () => {
+      return (
+        conversion('<table><tr><td></td></tr></table>')
+      ).should.be.rejected()
+    })
 
-        beforeEach(function () {
-            rmDir(tmpDir);
-            conversion = require("../lib/conversion.js")({
-                tmpDir: tmpDir,
-                numberOfWorkers: 1,
-                strategy: strategyName
-            });
-        });
+    it('should be able to parse xlsx', async () => {
+      const stream = await conversion('<table><tr><td>hello</td></tr>')
 
-        it("should not fail", function (done) {
-            conversion("<table><tr><td>hello</td></tr>", function (err, res) {
-                if (err)
-                    return done(err);
+      const bufs = []
 
-                res.should.have.property("readable");
-                done();
-            });
-        });
+      stream.on('data', (d) => { bufs.push(d) })
+      stream.on('end', () => {
+        const buf = Buffer.concat(bufs)
+        xlsx.read(buf).Strings[0].t.should.be.eql('hello')
+      })
+    })
 
-        // enable this test when we have a fix for #21
-        it.skip("should not fail when last cell of a row has rowspan", function (done) {
-            conversion("<table><tr><td rowspan=\"2\">Cell RowSpan</td></tr><tr><td>Foo</td></tr></table>", function (err, res) {
-                if (err)
-                    return done(err);
+    it('should translate ampersands', async () => {
+      const stream = await conversion('<table><tr><td>& &</td></tr>')
 
-                res.should.have.property("readable");
-                done();
-            });
-        })
+      const bufs = []
 
-        it("should callback error when input contains invalid characters", function (done) {
-            conversion("<table><tr><td></td></tr></table>", function (err, res) {
-                if (err)
-                    return done();
+      stream.on('data', (d) => { bufs.push(d) })
+      stream.on('end', () => {
+        const buf = Buffer.concat(bufs)
+        xlsx.read(buf).Strings[0].t.should.be.eql('& &')
+      })
+    })
 
-                done(new Error('Should have failed'));
-            });
-        });
-
-        it("should be able to parse xlsx", function (done) {
-            conversion("<table><tr><td>hello</td></tr>", function (err, res) {
-                if (err)
-                    return done(err);
-
-                var bufs = [];
-                res.on('data', function(d){ bufs.push(d); });
-                res.on('end', function() {
-                    var buf = Buffer.concat(bufs);
-                    xlsx.read(buf).Strings[0].t.should.be.eql('hello');
-                    done();
-                })
-            });
-        });
-
-        it("should translate ampersands", function (done) {
-            conversion("<table><tr><td>& &</td></tr>", function (err, res) {
-                if (err)
-                    return done(err);
-
-                var bufs = [];
-                res.on('data', function(d){ bufs.push(d); });
-                res.on('end', function() {
-                    var buf = Buffer.concat(bufs);
-                    xlsx.read(buf).Strings[0].t.should.be.eql('& &');
-                    done();
-                })
-            });
-        });
-
-        it("should callback error when row doesn't contain cells", function (done) {
-            conversion("<table><tr>Hello</tr></table>", function (err, res) {
-                if (err)
-                    return done();
-
-                done(new Error('It should have callback error'));
-            });
-        });
-    }
-
-    rmDir = function (dirPath) {
-        if (!fs.existsSync(dirPath))
-            fs.mkdirSync(dirPath);
-
-        try {
-            var files = fs.readdirSync(dirPath);
-        }
-        catch (e) {
-            return;
-        }
-        if (files.length > 0)
-            for (var i = 0; i < files.length; i++) {
-                var filePath = dirPath + '/' + files[i];
-                try {
-                    if (fs.statSync(filePath).isFile()) {
-                        fs.unlinkSync(filePath);
-                    }
-                }
-                catch(e) { }
-            }
-    };
-});
+    it('should callback error when row doesn\'t contain cells', async () => {
+      return (
+        conversion('<table><tr>Hello</tr></table>')
+      ).should.be.rejected()
+    })
+  }
+})
