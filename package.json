@@ -1,6 +1,6 @@
 {
   "name": "html-to-xlsx",
-  "version": "0.6.8",
+  "version": "1.0.0",
   "author": {
     "name": "Jan Blaha",
     "email": "jan.blaha@hotmail.com"
@@ -37,11 +37,11 @@
   },
   "devDependencies": {
     "babel-eslint": "8.2.2",
-    "chrome-page-eval": "github:bjrmatos/chrome-page-eval",
+    "chrome-page-eval": "1.0.0",
     "eslint": "4.18.2",
     "eslint-plugin-babel": "4.1.2",
     "mocha": "5.0.2",
-    "phantom-page-eval": "github:bjrmatos/phantom-page-eval",
+    "phantom-page-eval": "1.0.0",
     "phantomjs": "1.9.17",
     "puppeteer": "1.0.0",
     "should": "13.2.1",
