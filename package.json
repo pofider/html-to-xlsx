@@ -32,7 +32,7 @@
     }
   },
   "dependencies": {
-    "msexcel-builder-extended": "0.0.7",
+    "msexcel-builder-extended": "0.0.8",
     "uuid": "3.2.1"
   },
   "devDependencies": {
