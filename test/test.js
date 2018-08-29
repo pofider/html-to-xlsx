@@ -1,4 +1,4 @@
-require('should')
+const should = require('should')
 const util = require('util')
 const path = require('path')
 const fs = require('fs')
@@ -85,7 +85,7 @@ describe('html extraction', () => {
       table.rows[0][0].value.should.be.eql('1')
     })
 
-    it('should parse backgroud color', async () => {
+    it('should parse background color', async () => {
       const table = await pageEval({
         html: await createHtmlFile(`<table><tr><td style='background-color:red'>1</td></tr></table>`),
         scriptFn: extractTableScriptFn
@@ -269,11 +269,397 @@ describe('html to xlsx conversion with strategy', () => {
       stream.should.have.property('readable')
     })
 
-    // enable this test when we have a fix for #21
-    it.skip('should not fail when last cell of a row has rowspan', async () => {
-      const stream = await conversion('<table><tr><td>hello</td></tr>')
+    it('should not fail when last cell of a row has rowspan', async () => {
+      const stream = await conversion(`<table><tr><td rowspan="2">Cell RowSpan</td></tr><tr><td>Foo</td></tr></table>`)
 
       stream.should.have.property('readable')
+    })
+
+    it('should work when using special rowspan layout #1', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+              <td rowspan="3">ROWSPAN 3</td>
+          </tr>
+          <tr>
+              <td>Ipsum</td>
+              <td>Data</td>
+          </tr>
+          <tr>
+              <td>Hello</td>
+              <td>World</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('ROWSPAN 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('Ipsum')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('Data')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('Hello')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('World')
+    })
+
+    it('should work when using special rowspan layout #2', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+              <td rowspan="3">ROWSPAN 3</td>
+              <td>Header 2</td>
+              <td>Header 3</td>
+          </tr>
+          <tr>
+              <td>Ipsum</td>
+              <td>Data</td>
+          </tr>
+          <tr>
+              <td>Hello</td>
+              <td>World</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('ROWSPAN 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('Header 2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('Header 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('Ipsum')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('Data')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('Hello')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3'].v).be.eql('World')
+    })
+
+    it('should work when using special rowspan layout #3', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+              <td rowspan="3">NRO1</td>
+              <td rowspan="3">NRO2</td>
+              <td rowspan="3">NRO3</td>
+              <td rowspan="3">NRO4</td>
+          </tr>
+          <tr>
+              <td>Doc1.</td>
+          </tr>
+          <tr>
+              <td>Doc2.</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('NRO1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('NRO2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('NRO3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('NRO4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.eql('Doc1.')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E2'].v).be.eql('Doc2.')
+    })
+
+    it('should work when using special rowspan layout #4', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+              <td rowspan="3">NRO1</td>
+              <td rowspan="3">NRO2</td>
+              <td rowspan="3">NRO3</td>
+              <td>NRO4</td>
+          </tr>
+          <tr>
+              <td>Doc1.</td>
+          </tr>
+          <tr>
+              <td>Doc2.</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('NRO1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('NRO2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('NRO3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('NRO4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('Doc1.')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('Doc2.')
+    })
+
+    it('should work when using special rowspan layout #5', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+              <td rowspan="3">NRO1</td>
+              <td rowspan="3">Text1</td>
+              <td rowspan="3">Text2</td>
+              <td colspan="3">Receip</td>
+          </tr>
+          <tr>
+              <td>Doc.</td>
+              <td colspan="2">Information</td>
+          </tr>
+          <tr>
+              <td>Text3</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('NRO1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('Text1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('Text2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('Receip')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('Doc.')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E2'].v).be.eql('Information')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('Text3')
+    })
+
+    it('should work when using special rowspan layout #6', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+              <td rowspan="3">ROWSPAN 3</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('ROWSPAN 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+    })
+
+    it('should work when using special rowspan layout #7', async () => {
+      const stream = await conversion(`
+        <table border="1" style="border-collapse:collapse;">
+          <tr>
+            <td rowspan="2" colspan="2">corner</td>
+            <td colspan="5">2015</td>
+            <td colspan="5">2016</td>
+            <td colspan="5">Summary</td>
+          </tr>
+          <tr>
+            <td>Amount 1</td>
+            <td>Amount 2</td>
+            <td>Amount 3</td>
+            <td>Amount 4</td>
+            <td>Amount 5</td>
+            <td>Amount 1</td>
+            <td>Amount 2</td>
+            <td>Amount 3</td>
+            <td>Amount 4</td>
+            <td>Amount 5</td>
+            <td>Total Amount 1</td>
+            <td>Total Amount 2</td>
+            <td>Total Amount 3</td>
+            <td>Total Amount 4</td>
+            <td>Total Amount 5</td>
+          </tr>
+          <tr>
+            <td rowspan="2" >Buffer</td>
+            <td>Jane Doe</td>
+            <td>10</td>
+            <td>15</td>
+            <td>20</td>
+            <td>25</td>
+            <td>30</td>
+            <td>2</td>
+            <td>4</td>
+            <td>6</td>
+            <td>8</td>
+            <td>10</td>
+            <td>12</td>
+            <td>19</td>
+            <td>26</td>
+            <td>32</td>
+            <td>40</td>
+          </tr>
+          <tr>
+            <td>Thomas Smith</td>
+            <td>0</td>
+            <td>25</td>
+            <td>20</td>
+            <td>15</td>
+            <td>10</td>
+            <td>5</td>
+            <td>3</td>
+            <td>6</td>
+            <td>9</td>
+            <td>12</td>
+            <td>15</td>
+            <td>5</td>
+            <td>28</td>
+            <td>26</td>
+            <td>22</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('corner')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('2015')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H1'].v).be.eql('2016')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['K1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['L1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['M1'].v).be.eql('Summary')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['N1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['O1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['P1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['Q1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('Amount 1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('Amount 2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E2'].v).be.eql('Amount 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F2'].v).be.eql('Amount 4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G2'].v).be.eql('Amount 5')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H2'].v).be.eql('Amount 1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I2'].v).be.eql('Amount 2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J2'].v).be.eql('Amount 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['K2'].v).be.eql('Amount 4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['L2'].v).be.eql('Amount 5')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['M2'].v).be.eql('Total Amount 1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['N2'].v).be.eql('Total Amount 2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['O2'].v).be.eql('Total Amount 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['P2'].v).be.eql('Total Amount 4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['Q2'].v).be.eql('Total Amount 5')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3'].v).be.eql('Buffer')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A4']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('Jane Doe')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3'].v).be.eql('10')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('15')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E3'].v).be.eql('20')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F3'].v).be.eql('25')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G3'].v).be.eql('30')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H3'].v).be.eql('2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I3'].v).be.eql('4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J3'].v).be.eql('6')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['K3'].v).be.eql('8')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['L3'].v).be.eql('10')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['M3'].v).be.eql('12')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['N3'].v).be.eql('19')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['O3'].v).be.eql('26')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['P3'].v).be.eql('32')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['Q3'].v).be.eql('40')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B4'].v).be.eql('Thomas Smith')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C4'].v).be.eql('0')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D4'].v).be.eql('25')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E4'].v).be.eql('20')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F4'].v).be.eql('15')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G4'].v).be.eql('10')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H4'].v).be.eql('5')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I4'].v).be.eql('3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J4'].v).be.eql('6')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['K4'].v).be.eql('9')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['L4'].v).be.eql('12')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['M4'].v).be.eql('15')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['N4'].v).be.eql('5')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['O4'].v).be.eql('28')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['P4'].v).be.eql('26')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['Q4'].v).be.eql('22')
     })
 
     it('should callback error when input contains invalid characters', async () => {
