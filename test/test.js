@@ -436,6 +436,46 @@ describe('html to xlsx conversion with strategy', () => {
     })
 
     if (!legacy) {
+      it('shoule be able to set custom sheet name', async () => {
+        const parseXlsx = (xlsxStream) => {
+          return new Promise((resolve, reject) => {
+            const bufs = []
+
+            xlsxStream.on('error', reject)
+            xlsxStream.on('data', (d) => { bufs.push(d) })
+
+            xlsxStream.on('end', () => {
+              const buf = Buffer.concat(bufs)
+              resolve(xlsx.read(buf))
+            })
+          })
+        }
+
+        let stream = await conversion(`
+          <table name="custom">
+            <tr>
+              <td>1</td>
+            </tr>
+          </table>
+        `)
+
+        let parsedXlsx = await parseXlsx(stream)
+
+        should(parsedXlsx.SheetNames[0]).be.eql('custom')
+
+        stream = await conversion(`
+          <table data-sheet-name="custom2">
+            <tr>
+              <td>1</td>
+            </tr>
+          </table>
+        `)
+
+        parsedXlsx = await parseXlsx(stream)
+
+        should(parsedXlsx.SheetNames[0]).be.eql('custom2')
+      })
+
       it('should be able to set cell with datatypes', async () => {
         const stream = await conversion(`
           <table>
@@ -1239,6 +1279,49 @@ describe('html to xlsx conversion with strategy', () => {
         })
 
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Hello')
+      })
+
+      it('should generate multiple sheets when there are multiple tables in html', async () => {
+        const stream = await conversion(`
+          <table name="Data1">
+            <tr>
+              <td>1</td>
+              <td>2</td>
+              <td>3</td>
+              <td>4</td>
+            </tr>
+          </table>
+          <table name="Data2">
+            <tr>
+              <td>1</td>
+              <td>2</td>
+              <td>3</td>
+              <td>4</td>
+            </tr>
+          </table>
+        `)
+
+        const parsedXlsx = await new Promise((resolve, reject) => {
+          const bufs = []
+
+          stream.on('error', reject)
+          stream.on('data', (d) => { bufs.push(d) })
+
+          stream.on('end', () => {
+            const buf = Buffer.concat(bufs)
+            resolve(xlsx.read(buf))
+          })
+        })
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('1')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('2')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('3')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('4')
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['A1'].v).be.eql('1')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['B1'].v).be.eql('2')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['C1'].v).be.eql('3')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['D1'].v).be.eql('4')
       })
     }
 
