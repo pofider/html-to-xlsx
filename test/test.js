@@ -26,40 +26,6 @@ const phantomEval = phantomPageEval({
   clean: false
 })
 
-async function createHtmlFile (html) {
-  const outputPath = path.join(tmpDir, `${uuid()}.html`)
-
-  await writeFileAsync(outputPath, html)
-
-  return outputPath
-}
-
-function rmDir (dirPath) {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath)
-  }
-
-  let files
-
-  try {
-    files = fs.readdirSync(dirPath)
-  } catch (e) {
-    return
-  }
-
-  if (files.length > 0) {
-    for (let i = 0; i < files.length; i++) {
-      let filePath = `${dirPath}/${files[i]}`
-
-      try {
-        if (fs.statSync(filePath).isFile()) {
-          fs.unlinkSync(filePath)
-        }
-      } catch (e) { }
-    }
-  }
-}
-
 describe('html extraction', () => {
   beforeEach(() => {
     rmDir(tmpDir)
@@ -74,15 +40,55 @@ describe('html extraction', () => {
   })
 
   function common (pageEval) {
-    it('should build simple table', async () => {
+    it('should parse simple table', async () => {
       const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td>1</td></tr></table>`),
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td>1</td>
+            </tr>
+          </table>
+        `),
         scriptFn: extractTableScriptFn
       })
 
       table.rows.should.have.length(1)
       table.rows[0].should.have.length(1)
       table.rows[0][0].value.should.be.eql('1')
+    })
+
+    it('should parse value', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td>node.js & javascript</td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows.should.have.length(1)
+      table.rows[0].should.have.length(1)
+      table.rows[0][0].value.should.be.eql('node.js &amp; javascript')
+    })
+
+    it('should parse un-escaped value', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td>node.js & javascript</td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows.should.have.length(1)
+      table.rows[0].should.have.length(1)
+      table.rows[0][0].valueText.should.be.eql('node.js & javascript')
     })
 
     it('should parse background color', async () => {
@@ -150,7 +156,13 @@ describe('html extraction', () => {
 
     it('should parse border', async () => {
       const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='border-style:solid;'>1</td></tr></table>`),
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td style='border-style:solid;'>1</td>
+            </tr>
+          </table>
+        `),
         scriptFn: extractTableScriptFn
       })
 
@@ -160,6 +172,23 @@ describe('html extraction', () => {
       table.rows[0][0].border.top.should.be.eql('solid')
     })
 
+    it('should parse complex border', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td style='border-left: 1px solid red;'>1</td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows[0][0].border.leftColor.should.be.eql(['255', '0', '0'])
+      table.rows[0][0].border.leftWidth.should.be.eql('1px')
+      table.rows[0][0].border.leftStyle.should.be.eql('solid')
+    })
+
     it('should parse overflow', async () => {
       const table = await pageEval({
         html: await createHtmlFile(`<table><tr><td style='overflow:scroll;'>1234567789012345678912457890</td></tr></table>`),
@@ -167,6 +196,23 @@ describe('html extraction', () => {
       })
 
       table.rows[0][0].wrapText.should.be.eql('scroll')
+    })
+
+    it('should parse textDecoration', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td style='text-decoration: underline'>
+                1234
+              </td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows[0][0].textDecoration.line.should.be.eql('underline')
     })
 
     it('should parse backgroud color from styles with line endings', async () => {
@@ -221,12 +267,15 @@ describe('html extraction', () => {
         html: await createHtmlFile(`
           <table>
             <tr>
-              <td rowspan='3'>Row 1 Col 1</td><td>Row 1 Col 2</td>
-              <td>Row 1 Col 3</td><td>Row 1 Col 4</td>
+              <td rowspan='3'>Row 1 Col 1</td>
+              <td>Row 1 Col 2</td>
+              <td>Row 1 Col 3</td>
+              <td>Row 1 Col 4</td>
             </tr>
             <tr>
               <td rowspan='2'>Row 2 Col 1</td>
-              <td rowspan='2'>Row 2 Col 2</td><td>Row 2 Col 3</td>
+              <td rowspan='2'>Row 2 Col 2</td>
+              <td>Row 2 Col 3</td>
             </tr>
             <tr>
               <td>Row 3 Col 3</td>
@@ -244,38 +293,97 @@ describe('html extraction', () => {
 })
 
 describe('html to xlsx conversion with strategy', () => {
-  describe('chrome-strategy', () => {
-    commonConversion(chromeEval)
-  })
-  describe('phantom-strategy', () => {
-    commonConversion(phantomEval)
+  describe('legacy', () => {
+    describe('chrome-strategy', () => {
+      commonConversion(chromeEval, true)
+    })
+    describe('phantom-strategy', () => {
+      commonConversion(phantomEval, true)
+    })
   })
 
-  function commonConversion (pageEval) {
+  describe('standard', () => {
+    describe('chrome-strategy', () => {
+      commonConversion(chromeEval)
+    })
+    describe('phantom-strategy', () => {
+      commonConversion(phantomEval)
+    })
+  })
+
+  function commonConversion (pageEval, legacy = false) {
     let conversion
 
     beforeEach(function () {
       rmDir(tmpDir)
 
-      conversion = require('../')({
+      const conversionFn = require('../')({
         tmpDir: tmpDir,
         extract: pageEval
       })
+
+      conversion = (html, convertOptions) => {
+        const opts = {
+          ...convertOptions,
+          legacy
+        }
+
+        return conversionFn(html, opts)
+      }
     })
 
     it('should not fail', async () => {
-      const stream = await conversion('<table><tr><td>hello</td></tr>')
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <td>hello</td>
+          </tr>
+        </table
+      `)
 
       stream.should.have.property('readable')
+    })
+
+    it('default sheet name should be Sheet1', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <td>hello</td>
+          </tr>
+        </table
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.SheetNames[0]).be.eql('Sheet1')
     })
 
     it('should not fail when last cell of a row has rowspan', async () => {
-      const stream = await conversion(`<table><tr><td rowspan="2">Cell RowSpan</td></tr><tr><td>Foo</td></tr></table>`)
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <td rowspan="2">Cell RowSpan</td>
+          </tr>
+          <tr>
+            <td>Foo</td>
+          </tr>
+        </table>
+      `)
 
       stream.should.have.property('readable')
     })
 
-    it('should work when using special rowspan layout #1', async () => {
+    it('should work when using special rowspan layout #1 (row with just one cell)', async () => {
       const stream = await conversion(`
         <table>
           <tr>
@@ -310,9 +418,62 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('Data')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('Hello')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('World')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
     })
 
-    it('should work when using special rowspan layout #2', async () => {
+    it('should work when using special rowspan layout #2 (row with just one cell, more rows)', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+              <td rowspan="3">ROWSPAN 3</td>
+          </tr>
+          <tr>
+              <td>Ipsum</td>
+              <td>Data</td>
+          </tr>
+          <tr>
+              <td>Hello</td>
+              <td>World</td>
+          </tr>
+          <tr>
+              <td>Something</td>
+              <td>Else</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('ROWSPAN 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('Ipsum')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('Data')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('Hello')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('World')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3'].v).be.eql('Something')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('Else')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
+    })
+
+    it('should work when using special rowspan layout #3 (row with normal cells and first cell with rowspan)', async () => {
       const stream = await conversion(`
         <table>
           <tr>
@@ -352,9 +513,14 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('Data')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('Hello')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3'].v).be.eql('World')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
     })
 
-    it('should work when using special rowspan layout #3', async () => {
+    it('should work when using special rowspan layout #4 (row with all cells using rowspan)', async () => {
       const stream = await conversion(`
         <table>
           <tr>
@@ -394,9 +560,29 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2']).be.undefined()
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.eql('Doc1.')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E2'].v).be.eql('Doc2.')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(2)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.c).be.eql(3)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.c).be.eql(3)
     })
 
-    it('should work when using special rowspan layout #4', async () => {
+    it('should work when using special rowspan layout #5 (row with lot of cells using rowspan but last one without it)', async () => {
       const stream = await conversion(`
         <table>
           <tr>
@@ -438,9 +624,24 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('NRO4')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('Doc1.')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('Doc2.')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(2)
     })
 
-    it('should work when using special rowspan layout #5', async () => {
+    it('should work when using special rowspan layout #6 (row with lot of cells using rowspan but last one using colspan)', async () => {
       const stream = await conversion(`
         <table>
           <tr>
@@ -487,9 +688,34 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E2'].v).be.eql('Information')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F2']).be.undefined()
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('Text3')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(2)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.c).be.eql(3)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.c).be.eql(5)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.c).be.eql(4)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.c).be.eql(5)
     })
 
-    it('should work when using special rowspan layout #6', async () => {
+    it('should work when using special rowspan layout #7 (row with only one cell that uses rowspan greater than available rows)', async () => {
       const stream = await conversion(`
         <table>
           <tr>
@@ -512,9 +738,13 @@ describe('html to xlsx conversion with strategy', () => {
 
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('ROWSPAN 3')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+
+      if (!legacy) {
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges']).be.undefined()
+      }
     })
 
-    it('should work when using special rowspan layout #7', async () => {
+    it('should work when using special rowspan layout #8 (complex calendar like layout)', async () => {
       const stream = await conversion(`
         <table border="1" style="border-collapse:collapse;">
           <tr>
@@ -660,11 +890,131 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['O4'].v).be.eql('28')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['P4'].v).be.eql('26')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['Q4'].v).be.eql('22')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(1)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(6)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(7)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(11)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.c).be.eql(12)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.c).be.eql(16)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.r).be.eql(3)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.c).be.eql(0)
     })
+
+    if (!legacy) {
+      it('should work when using special rowspan layout #9 (using rowspan in different rows)', async () => {
+        const stream = await conversion(`
+          <table>
+            <tr>
+              <td rowspan='3'>Row 1 Col 1</td>
+              <td>Row 1 Col 2</td>
+              <td>Row 1 Col 3</td>
+              <td>Row 1 Col 4</td>
+            </tr>
+            <tr>
+              <td rowspan='2'>Row 2 Col 1</td>
+              <td rowspan='2'>Row 2 Col 2</td>
+              <td>Row 2 Col 3</td>
+            </tr>
+            <tr>
+              <td>Row 3 Col 3</td>
+            </tr>
+          </table>
+        `)
+
+        const parsedXlsx = await new Promise((resolve, reject) => {
+          const bufs = []
+
+          stream.on('error', reject)
+          stream.on('data', (d) => { bufs.push(d) })
+
+          stream.on('end', () => {
+            const buf = Buffer.concat(bufs)
+            resolve(xlsx.read(buf))
+          })
+        })
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Row 1 Col 1')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3']).be.undefined()
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('Row 1 Col 2')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('Row 2 Col 1')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3']).be.undefined()
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('Row 1 Col 3')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('Row 2 Col 2')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3']).be.undefined()
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('Row 1 Col 4')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('Row 2 Col 3')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('Row 3 Col 3')
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(2)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
+      })
+
+      it('should be able to set fontFamily', async () => {
+        const stream = await conversion(`
+          <table>
+            <tr>
+              <td>Hello</td>
+            </tr>
+          </table>
+        `, {
+          fontFamily: 'Verdana'
+        })
+
+        const parsedXlsx = await new Promise((resolve, reject) => {
+          const bufs = []
+
+          stream.on('error', reject)
+          stream.on('data', (d) => { bufs.push(d) })
+
+          stream.on('end', () => {
+            const buf = Buffer.concat(bufs)
+            resolve(xlsx.read(buf))
+          })
+        })
+
+        should(parsedXlsx.Styles.Fonts[0].name).be.eql('Verdana')
+      })
+    }
 
     it('should callback error when input contains invalid characters', async () => {
       return (
-        conversion('<table><tr><td></td></tr></table>')
+        conversion(`
+          <table>
+            <tr>
+              <td></td>
+            </tr>
+          </table>
+        `)
       ).should.be.rejected()
     })
 
@@ -681,14 +1031,28 @@ describe('html to xlsx conversion with strategy', () => {
     })
 
     it('should translate ampersands', async () => {
-      const stream = await conversion('<table><tr><td>& &</td></tr>')
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <td>& &</td>
+          </tr>
+        </table>
+      `)
 
       const bufs = []
 
-      stream.on('data', (d) => { bufs.push(d) })
-      stream.on('end', () => {
-        const buf = Buffer.concat(bufs)
-        xlsx.read(buf).Strings[0].t.should.be.eql('& &')
+      await new Promise((resolve, reject) => {
+        stream.on('data', (d) => { bufs.push(d) })
+        stream.on('error', reject)
+        stream.on('end', () => {
+          try {
+            const buf = Buffer.concat(bufs)
+            xlsx.read(buf).Strings[0].t.should.be.eql('& &')
+            resolve()
+          } catch (e) {
+            reject(e)
+          }
+        })
       })
     })
 
@@ -699,3 +1063,37 @@ describe('html to xlsx conversion with strategy', () => {
     })
   }
 })
+
+async function createHtmlFile (html) {
+  const outputPath = path.join(tmpDir, `${uuid()}.html`)
+
+  await writeFileAsync(outputPath, html)
+
+  return outputPath
+}
+
+function rmDir (dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath)
+  }
+
+  let files
+
+  try {
+    files = fs.readdirSync(dirPath)
+  } catch (e) {
+    return
+  }
+
+  if (files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      let filePath = `${dirPath}/${files[i]}`
+
+      try {
+        if (fs.statSync(filePath).isFile()) {
+          fs.unlinkSync(filePath)
+        }
+      } catch (e) { }
+    }
+  }
+}
