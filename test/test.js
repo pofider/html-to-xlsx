@@ -91,6 +91,49 @@ describe('html extraction', () => {
       table.rows[0][0].valueText.should.be.eql('node.js & javascript')
     })
 
+    it('should parse cell data type', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td data-cell-type="number">10</td>
+              <td data-cell-type="boolean">1</td>
+              <td data-cell-type="date">2019-01-22</td>
+              <td data-cell-type="datetime">2019-01-22T17:31:36.242Z</td>
+              <td data-cell-type="formula">=SUM(A1, B1)</td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows.should.have.length(1)
+      table.rows[0].should.have.length(5)
+      table.rows[0][0].type = 'number'
+      table.rows[0][1].type = 'boolean'
+      table.rows[0][2].type = 'date'
+      table.rows[0][3].type = 'datetime'
+      table.rows[0][4].type = 'formula'
+    })
+
+    it('should parse format str and enum', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td data-cell-type="number" data-cell-format-str="0.00">10</td>
+              <td data-cell-type="number" data-cell-format-enum="3">100000</td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows.should.have.length(1)
+      table.rows[0][0].formatStr = '0.00'
+      table.rows[0][1].formatEnum = 3
+    })
+
     it('should parse background color', async () => {
       const table = await pageEval({
         html: await createHtmlFile(`<table><tr><td style='background-color:red'>1</td></tr></table>`),
@@ -367,6 +410,69 @@ describe('html to xlsx conversion with strategy', () => {
 
       should(parsedXlsx.SheetNames[0]).be.eql('Sheet1')
     })
+
+    if (!legacy) {
+      it('should be able to set cell with datatypes', async () => {
+        const stream = await conversion(`
+          <table>
+            <tr>
+              <td data-cell-type="number">10</td>
+              <td data-cell-type="number">10</td>
+              <td data-cell-type="boolean">1</td>
+              <td data-cell-type="date">2019-01-22</td>
+              <td data-cell-type="datetime">2019-01-22T17:31:36.242Z</td>
+              <td data-cell-type="formula">=SUM(A1, B1)</td>
+            </tr>
+          </table>
+        `)
+
+        const parsedXlsx = await new Promise((resolve, reject) => {
+          const bufs = []
+
+          stream.on('error', reject)
+          stream.on('data', (d) => { bufs.push(d) })
+
+          stream.on('end', () => {
+            const buf = Buffer.concat(bufs)
+            resolve(xlsx.read(buf))
+          })
+        })
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql(10)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(10)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql(true)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].w).be.eql('1/22/19')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].w).be.eql('1/22/19 17:31')
+      })
+
+      it('should be able to set cell format', async () => {
+        const stream = await conversion(`
+          <table>
+            <tr>
+              <td data-cell-type="number" data-cell-format-str="0.00">10</td>
+              <td data-cell-type="number" data-cell-format-enum="3">100000</td>
+            </tr>
+          </table>
+        `)
+
+        const parsedXlsx = await new Promise((resolve, reject) => {
+          const bufs = []
+
+          stream.on('error', reject)
+          stream.on('data', (d) => { bufs.push(d) })
+
+          stream.on('end', () => {
+            const buf = Buffer.concat(bufs)
+            resolve(xlsx.read(buf))
+          })
+        })
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql(10)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].w).be.eql('10.00')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(100000)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].w).be.eql('100,000')
+      })
+    }
 
     it('should not fail when last cell of a row has rowspan', async () => {
       const stream = await conversion(`
