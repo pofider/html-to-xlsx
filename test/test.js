@@ -332,6 +332,30 @@ describe('html extraction', () => {
       table.rows[0][0].value.should.be.eql('Row 1 Col 1')
       table.rows[1][1].value.should.be.eql('Row 2 Col 2')
     })
+
+    it('should parse th elements', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <th>col1</th>
+              <th>col2</th>
+            </tr>
+            <tr>
+              <td>1</td>
+              <td>2</td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows.should.have.length(2)
+      table.rows[0][0].value.should.be.eql('col1')
+      table.rows[0][1].value.should.be.eql('col2')
+      table.rows[1][0].value.should.be.eql('1')
+      table.rows[1][1].value.should.be.eql('2')
+    })
   }
 })
 
@@ -473,6 +497,38 @@ describe('html to xlsx conversion with strategy', () => {
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].w).be.eql('100,000')
       })
     }
+
+    it('should work with th elements', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <th>col1</th>
+            <th>col2</th>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td>2</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('col1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('col2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2'].v).be.eql('1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('2')
+    })
 
     it('should not fail when last cell of a row has rowspan', async () => {
       const stream = await conversion(`
@@ -1109,6 +1165,80 @@ describe('html to xlsx conversion with strategy', () => {
         })
 
         should(parsedXlsx.Styles.Fonts[0].name).be.eql('Verdana')
+      })
+
+      it('should wait for JS trigger', async () => {
+        const stream = await conversion(`
+          <table id="main">
+          </table>
+          <script>
+            setTimeout(function () {
+              var table = document.getElementById('main')
+              var row = document.createElement('tr')
+              var cell = document.createElement('td')
+
+              cell.innerHTML = 'Hello'
+              row.appendChild(cell)
+              table.appendChild(row)
+
+              window.CHROME_PAGE_EVAL_READY = true
+              window.PHANTOM_PAGE_EVAL_READY = true
+            }, 500)
+          </script>
+        `, {
+          waitForJS: true
+        })
+
+        const parsedXlsx = await new Promise((resolve, reject) => {
+          const bufs = []
+
+          stream.on('error', reject)
+          stream.on('data', (d) => { bufs.push(d) })
+
+          stream.on('end', () => {
+            const buf = Buffer.concat(bufs)
+            resolve(xlsx.read(buf))
+          })
+        })
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Hello')
+      })
+
+      it('should wait for JS trigger (custom var name)', async () => {
+        const stream = await conversion(`
+          <table id="main">
+          </table>
+          <script>
+            setTimeout(function () {
+              var table = document.getElementById('main')
+              var row = document.createElement('tr')
+              var cell = document.createElement('td')
+
+              cell.innerHTML = 'Hello'
+              row.appendChild(cell)
+              table.appendChild(row)
+
+              window.READY_TO_START = true
+            }, 500)
+          </script>
+        `, {
+          waitForJS: true,
+          waitForJSVarName: 'READY_TO_START'
+        })
+
+        const parsedXlsx = await new Promise((resolve, reject) => {
+          const bufs = []
+
+          stream.on('error', reject)
+          stream.on('data', (d) => { bufs.push(d) })
+
+          stream.on('end', () => {
+            const buf = Buffer.concat(bufs)
+            resolve(xlsx.read(buf))
+          })
+        })
+
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Hello')
       })
     }
 
