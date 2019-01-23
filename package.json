@@ -52,6 +52,6 @@
     "xlsx": "0.12.4"
   },
   "scripts": {
-    "test": "mocha --timeout 10000 test/test.js && standard"
+    "test": "mocha --timeout 15000 test/test.js && standard"
   }
 }
