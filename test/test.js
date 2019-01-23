@@ -384,19 +384,11 @@ describe('html to xlsx conversion with strategy', () => {
     beforeEach(function () {
       rmDir(tmpDir)
 
-      const conversionFn = require('../')({
+      conversion = require('../')({
+        legacy,
         tmpDir: tmpDir,
         extract: pageEval
       })
-
-      conversion = (html, convertOptions) => {
-        const opts = {
-          ...convertOptions,
-          legacy
-        }
-
-        return conversionFn(html, opts)
-      }
     })
 
     it('should not fail', async () => {
