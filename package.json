@@ -32,11 +32,11 @@
     }
   },
   "dependencies": {
-    "better-xlsx": "0.7.3",
     "moment": "2.22.1",
     "msexcel-builder-extended": "0.0.8",
     "tinycolor2": "1.4.1",
-    "uuid": "3.2.1"
+    "uuid": "3.2.1",
+    "xlsx-populate": "1.18.0"
   },
   "devDependencies": {
     "babel-eslint": "8.2.2",

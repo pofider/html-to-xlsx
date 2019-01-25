@@ -497,8 +497,8 @@ describe('html to xlsx conversion with strategy', () => {
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql(10)
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(10)
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql(true)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].w).be.eql('1/22/19')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].w).be.eql('1/22/19 17:31')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].w).be.eql('2019-01-22')
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].w).be.eql('2019-01-22 12:31:36')
       })
 
       it('should be able to set cell format', async () => {
@@ -1177,7 +1177,7 @@ describe('html to xlsx conversion with strategy', () => {
         const stream = await conversion(`
           <table>
             <tr>
-              <td>Hello</td>
+              <td style="font-size: 34px">Hello</td>
             </tr>
           </table>
         `, {
@@ -1196,7 +1196,7 @@ describe('html to xlsx conversion with strategy', () => {
           })
         })
 
-        should(parsedXlsx.Styles.Fonts[0].name).be.eql('Verdana')
+        should(parsedXlsx.Styles.Fonts).matchAny((font) => should(font.name).be.eql('Verdana'))
       })
 
       it('should wait for JS trigger', async () => {
