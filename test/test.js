@@ -497,8 +497,8 @@ describe('html to xlsx conversion with strategy', () => {
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql(10)
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(10)
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql(true)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql(43487)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.eql(43487.73027777778)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.Number()
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.Number()
       })
 
       it('should be able to set cell format', async () => {
