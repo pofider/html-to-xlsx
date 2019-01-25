@@ -476,7 +476,7 @@ describe('html to xlsx conversion with strategy', () => {
               <td data-cell-type="number">10</td>
               <td data-cell-type="boolean">1</td>
               <td data-cell-type="date">2019-01-22</td>
-              <td data-cell-type="datetime">2019-01-22T17:31:36.242Z</td>
+              <td data-cell-type="datetime">2019-01-22T17:31:36.000-05:00</td>
               <td data-cell-type="formula">=SUM(A1, B1)</td>
             </tr>
           </table>
@@ -498,7 +498,7 @@ describe('html to xlsx conversion with strategy', () => {
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(10)
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql(true)
         should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql(43487)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.eql(43487.52194724537)
+        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.eql(43487.73027777778)
       })
 
       it('should be able to set cell format', async () => {
