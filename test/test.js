@@ -152,6 +152,23 @@ describe('html extraction', () => {
       table.rows[0][0].foregroundColor[0].should.be.eql('255')
     })
 
+    it('should parse fontFamily', async () => {
+      const table = await pageEval({
+        html: await createHtmlFile(`
+          <table>
+            <tr>
+              <td style='font-family:Calibri'>1</td>
+              <td style='font-family: "Times New Roman"'>2</td>
+            </tr>
+          </table>
+        `),
+        scriptFn: extractTableScriptFn
+      })
+
+      table.rows[0][0].fontFamily.should.be.eql('Calibri')
+      table.rows[0][1].fontFamily.should.be.eql('Times New Roman')
+    })
+
     it('should parse fontsize', async () => {
       const table = await pageEval({
         html: await createHtmlFile(`<table><tr><td style='font-size:19px'>1</td></tr></table>`),
@@ -1175,14 +1192,17 @@ describe('html to xlsx conversion with strategy', () => {
 
       it('should be able to set fontFamily', async () => {
         const stream = await conversion(`
+          <style>
+            * {
+              font-family: Verdana
+            }
+          </style>
           <table>
             <tr>
               <td style="font-size: 34px">Hello</td>
             </tr>
           </table>
-        `, {
-          fontFamily: 'Verdana'
-        })
+        `)
 
         const parsedXlsx = await new Promise((resolve, reject) => {
           const bufs = []
