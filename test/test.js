@@ -285,8 +285,6 @@ describe('html extraction', () => {
     })
 
     it('should work for long tables', async function () {
-      this.timeout(7000)
-
       let rows = ''
 
       for (let i = 0; i < 10000; i++) {
