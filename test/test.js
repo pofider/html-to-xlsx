@@ -375,32 +375,20 @@ describe('html extraction', () => {
 })
 
 describe('html to xlsx conversion with strategy', () => {
-  describe('legacy', () => {
-    describe('chrome-strategy', () => {
-      commonConversion(chromeEval, true)
-    })
-    describe('phantom-strategy', () => {
-      commonConversion(phantomEval, true)
-    })
+  describe('chrome-strategy', () => {
+    commonConversion(chromeEval)
+  })
+  describe('phantom-strategy', () => {
+    commonConversion(phantomEval)
   })
 
-  describe('standard', () => {
-    describe('chrome-strategy', () => {
-      commonConversion(chromeEval)
-    })
-    describe('phantom-strategy', () => {
-      commonConversion(phantomEval)
-    })
-  })
-
-  function commonConversion (pageEval, legacy = false) {
+  function commonConversion (pageEval) {
     let conversion
 
     beforeEach(function () {
       rmDir(tmpDir)
 
       conversion = require('../')({
-        legacy,
         tmpDir: tmpDir,
         extract: pageEval
       })
@@ -442,108 +430,106 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.SheetNames[0]).be.eql('Sheet1')
     })
 
-    if (!legacy) {
-      it('shoule be able to set custom sheet name', async () => {
-        const parseXlsx = (xlsxStream) => {
-          return new Promise((resolve, reject) => {
-            const bufs = []
-
-            xlsxStream.on('error', reject)
-            xlsxStream.on('data', (d) => { bufs.push(d) })
-
-            xlsxStream.on('end', () => {
-              const buf = Buffer.concat(bufs)
-              resolve(xlsx.read(buf))
-            })
-          })
-        }
-
-        let stream = await conversion(`
-          <table name="custom">
-            <tr>
-              <td>1</td>
-            </tr>
-          </table>
-        `)
-
-        let parsedXlsx = await parseXlsx(stream)
-
-        should(parsedXlsx.SheetNames[0]).be.eql('custom')
-
-        stream = await conversion(`
-          <table data-sheet-name="custom2">
-            <tr>
-              <td>1</td>
-            </tr>
-          </table>
-        `)
-
-        parsedXlsx = await parseXlsx(stream)
-
-        should(parsedXlsx.SheetNames[0]).be.eql('custom2')
-      })
-
-      it('should be able to set cell with datatypes', async () => {
-        const stream = await conversion(`
-          <table>
-            <tr>
-              <td data-cell-type="number">10</td>
-              <td data-cell-type="number">10</td>
-              <td data-cell-type="boolean">1</td>
-              <td data-cell-type="date">2019-01-22</td>
-              <td data-cell-type="datetime">2019-01-22T17:31:36.000-05:00</td>
-              <td data-cell-type="formula">=SUM(A1, B1)</td>
-            </tr>
-          </table>
-        `)
-
-        const parsedXlsx = await new Promise((resolve, reject) => {
+    it('shoule be able to set custom sheet name', async () => {
+      const parseXlsx = (xlsxStream) => {
+        return new Promise((resolve, reject) => {
           const bufs = []
 
-          stream.on('error', reject)
-          stream.on('data', (d) => { bufs.push(d) })
+          xlsxStream.on('error', reject)
+          xlsxStream.on('data', (d) => { bufs.push(d) })
 
-          stream.on('end', () => {
+          xlsxStream.on('end', () => {
             const buf = Buffer.concat(bufs)
             resolve(xlsx.read(buf))
           })
         })
+      }
 
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql(10)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(10)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql(true)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.Number()
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.Number()
-      })
+      let stream = await conversion(`
+        <table name="custom">
+          <tr>
+            <td>1</td>
+          </tr>
+        </table>
+      `)
 
-      it('should be able to set cell format', async () => {
-        const stream = await conversion(`
-          <table>
-            <tr>
-              <td data-cell-type="number" data-cell-format-str="0.00">10</td>
-              <td data-cell-type="number" data-cell-format-enum="3">100000</td>
-            </tr>
-          </table>
-        `)
+      let parsedXlsx = await parseXlsx(stream)
 
-        const parsedXlsx = await new Promise((resolve, reject) => {
-          const bufs = []
+      should(parsedXlsx.SheetNames[0]).be.eql('custom')
 
-          stream.on('error', reject)
-          stream.on('data', (d) => { bufs.push(d) })
+      stream = await conversion(`
+        <table data-sheet-name="custom2">
+          <tr>
+            <td>1</td>
+          </tr>
+        </table>
+      `)
 
-          stream.on('end', () => {
-            const buf = Buffer.concat(bufs)
-            resolve(xlsx.read(buf))
-          })
+      parsedXlsx = await parseXlsx(stream)
+
+      should(parsedXlsx.SheetNames[0]).be.eql('custom2')
+    })
+
+    it('should be able to set cell with datatypes', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <td data-cell-type="number">10</td>
+            <td data-cell-type="number">10</td>
+            <td data-cell-type="boolean">1</td>
+            <td data-cell-type="date">2019-01-22</td>
+            <td data-cell-type="datetime">2019-01-22T17:31:36.000-05:00</td>
+            <td data-cell-type="formula">=SUM(A1, B1)</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
         })
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql(10)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].w).be.eql('10.00')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(100000)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].w).be.eql('100,000')
       })
-    }
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql(10)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(10)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql(true)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.Number()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.Number()
+    })
+
+    it('should be able to set cell format', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <td data-cell-type="number" data-cell-format-str="0.00">10</td>
+            <td data-cell-type="number" data-cell-format-enum="3">100000</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql(10)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].w).be.eql('10.00')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql(100000)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].w).be.eql('100,000')
+    })
 
     it('should work with th elements', async () => {
       const stream = await conversion(`
@@ -947,10 +933,7 @@ describe('html to xlsx conversion with strategy', () => {
 
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('ROWSPAN 3')
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
-
-      if (!legacy) {
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges']).be.undefined()
-      }
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges']).be.undefined()
     })
 
     it('should work when using special rowspan layout #8 (complex calendar like layout)', async () => {
@@ -1126,214 +1109,212 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.c).be.eql(0)
     })
 
-    if (!legacy) {
-      it('should work when using special rowspan layout #9 (using rowspan in different rows)', async () => {
-        const stream = await conversion(`
-          <table>
-            <tr>
-              <td rowspan='3'>Row 1 Col 1</td>
-              <td>Row 1 Col 2</td>
-              <td>Row 1 Col 3</td>
-              <td>Row 1 Col 4</td>
-            </tr>
-            <tr>
-              <td rowspan='2'>Row 2 Col 1</td>
-              <td rowspan='2'>Row 2 Col 2</td>
-              <td>Row 2 Col 3</td>
-            </tr>
-            <tr>
-              <td>Row 3 Col 3</td>
-            </tr>
-          </table>
-        `)
+    it('should work when using special rowspan layout #9 (using rowspan in different rows)', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <td rowspan='3'>Row 1 Col 1</td>
+            <td>Row 1 Col 2</td>
+            <td>Row 1 Col 3</td>
+            <td>Row 1 Col 4</td>
+          </tr>
+          <tr>
+            <td rowspan='2'>Row 2 Col 1</td>
+            <td rowspan='2'>Row 2 Col 2</td>
+            <td>Row 2 Col 3</td>
+          </tr>
+          <tr>
+            <td>Row 3 Col 3</td>
+          </tr>
+        </table>
+      `)
 
-        const parsedXlsx = await new Promise((resolve, reject) => {
-          const bufs = []
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
 
-          stream.on('error', reject)
-          stream.on('data', (d) => { bufs.push(d) })
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
 
-          stream.on('end', () => {
-            const buf = Buffer.concat(bufs)
-            resolve(xlsx.read(buf))
-          })
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
         })
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Row 1 Col 1')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3']).be.undefined()
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('Row 1 Col 2')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('Row 2 Col 1')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3']).be.undefined()
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('Row 1 Col 3')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('Row 2 Col 2')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3']).be.undefined()
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('Row 1 Col 4')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('Row 2 Col 3')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('Row 3 Col 3')
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(2)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
       })
 
-      it('should be able to set fontFamily', async () => {
-        const stream = await conversion(`
-          <style>
-            * {
-              font-family: Verdana
-            }
-          </style>
-          <table>
-            <tr>
-              <td style="font-size: 34px">Hello</td>
-            </tr>
-          </table>
-        `)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Row 1 Col 1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('Row 1 Col 2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('Row 2 Col 1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('Row 1 Col 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('Row 2 Col 2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('Row 1 Col 4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('Row 2 Col 3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('Row 3 Col 3')
 
-        const parsedXlsx = await new Promise((resolve, reject) => {
-          const bufs = []
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
 
-          stream.on('error', reject)
-          stream.on('data', (d) => { bufs.push(d) })
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
 
-          stream.on('end', () => {
-            const buf = Buffer.concat(bufs)
-            resolve(xlsx.read(buf))
-          })
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
+    })
+
+    it('should be able to set fontFamily', async () => {
+      const stream = await conversion(`
+        <style>
+          * {
+            font-family: Verdana
+          }
+        </style>
+        <table>
+          <tr>
+            <td style="font-size: 34px">Hello</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
         })
-
-        should(parsedXlsx.Styles.Fonts).matchAny((font) => should(font.name).be.eql('Verdana'))
       })
 
-      it('should wait for JS trigger', async () => {
-        const stream = await conversion(`
-          <table id="main">
-          </table>
-          <script>
-            setTimeout(function () {
-              var table = document.getElementById('main')
-              var row = document.createElement('tr')
-              var cell = document.createElement('td')
+      should(parsedXlsx.Styles.Fonts).matchAny((font) => should(font.name).be.eql('Verdana'))
+    })
 
-              cell.innerHTML = 'Hello'
-              row.appendChild(cell)
-              table.appendChild(row)
+    it('should wait for JS trigger', async () => {
+      const stream = await conversion(`
+        <table id="main">
+        </table>
+        <script>
+          setTimeout(function () {
+            var table = document.getElementById('main')
+            var row = document.createElement('tr')
+            var cell = document.createElement('td')
 
-              window.CHROME_PAGE_EVAL_READY = true
-              window.PHANTOM_PAGE_EVAL_READY = true
-            }, 500)
-          </script>
-        `, {
-          waitForJS: true
-        })
+            cell.innerHTML = 'Hello'
+            row.appendChild(cell)
+            table.appendChild(row)
 
-        const parsedXlsx = await new Promise((resolve, reject) => {
-          const bufs = []
-
-          stream.on('error', reject)
-          stream.on('data', (d) => { bufs.push(d) })
-
-          stream.on('end', () => {
-            const buf = Buffer.concat(bufs)
-            resolve(xlsx.read(buf))
-          })
-        })
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Hello')
+            window.CHROME_PAGE_EVAL_READY = true
+            window.PHANTOM_PAGE_EVAL_READY = true
+          }, 500)
+        </script>
+      `, {
+        waitForJS: true
       })
 
-      it('should wait for JS trigger (custom var name)', async () => {
-        const stream = await conversion(`
-          <table id="main">
-          </table>
-          <script>
-            setTimeout(function () {
-              var table = document.getElementById('main')
-              var row = document.createElement('tr')
-              var cell = document.createElement('td')
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
 
-              cell.innerHTML = 'Hello'
-              row.appendChild(cell)
-              table.appendChild(row)
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
 
-              window.READY_TO_START = true
-            }, 500)
-          </script>
-        `, {
-          waitForJS: true,
-          waitForJSVarName: 'READY_TO_START'
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
         })
-
-        const parsedXlsx = await new Promise((resolve, reject) => {
-          const bufs = []
-
-          stream.on('error', reject)
-          stream.on('data', (d) => { bufs.push(d) })
-
-          stream.on('end', () => {
-            const buf = Buffer.concat(bufs)
-            resolve(xlsx.read(buf))
-          })
-        })
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Hello')
       })
 
-      it('should generate multiple sheets when there are multiple tables in html', async () => {
-        const stream = await conversion(`
-          <table name="Data1">
-            <tr>
-              <td>1</td>
-              <td>2</td>
-              <td>3</td>
-              <td>4</td>
-            </tr>
-          </table>
-          <table name="Data2">
-            <tr>
-              <td>1</td>
-              <td>2</td>
-              <td>3</td>
-              <td>4</td>
-            </tr>
-          </table>
-        `)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Hello')
+    })
 
-        const parsedXlsx = await new Promise((resolve, reject) => {
-          const bufs = []
+    it('should wait for JS trigger (custom var name)', async () => {
+      const stream = await conversion(`
+        <table id="main">
+        </table>
+        <script>
+          setTimeout(function () {
+            var table = document.getElementById('main')
+            var row = document.createElement('tr')
+            var cell = document.createElement('td')
 
-          stream.on('error', reject)
-          stream.on('data', (d) => { bufs.push(d) })
+            cell.innerHTML = 'Hello'
+            row.appendChild(cell)
+            table.appendChild(row)
 
-          stream.on('end', () => {
-            const buf = Buffer.concat(bufs)
-            resolve(xlsx.read(buf))
-          })
-        })
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('1')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('2')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('3')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('4')
-
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['A1'].v).be.eql('1')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['B1'].v).be.eql('2')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['C1'].v).be.eql('3')
-        should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['D1'].v).be.eql('4')
+            window.READY_TO_START = true
+          }, 500)
+        </script>
+      `, {
+        waitForJS: true,
+        waitForJSVarName: 'READY_TO_START'
       })
-    }
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Hello')
+    })
+
+    it('should generate multiple sheets when there are multiple tables in html', async () => {
+      const stream = await conversion(`
+        <table name="Data1">
+          <tr>
+            <td>1</td>
+            <td>2</td>
+            <td>3</td>
+            <td>4</td>
+          </tr>
+        </table>
+        <table name="Data2">
+          <tr>
+            <td>1</td>
+            <td>2</td>
+            <td>3</td>
+            <td>4</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1'].v).be.eql('4')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['A1'].v).be.eql('1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['B1'].v).be.eql('2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['C1'].v).be.eql('3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]]['D1'].v).be.eql('4')
+    })
 
     it('should callback error when input contains invalid characters', async () => {
       return (

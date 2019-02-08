@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "moment": "2.22.1",
-    "msexcel-builder-extended": "0.0.8",
     "tinycolor2": "1.4.1",
     "uuid": "3.2.1",
     "xlsx-populate": "1.18.0"
