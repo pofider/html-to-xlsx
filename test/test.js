@@ -1170,6 +1170,461 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
     })
 
+    it('should work when using special rowspan layout #10 (using rowspan and colspan in one row leaving some hole in cells for next row)', async () => {
+      const stream = await conversion(`
+        <style>
+            * {
+                font-family: Arial;
+            }
+
+            td {
+                padding: 15px;
+                font-size: 10px;
+                text-align: center;
+            }
+
+            .title {
+                font-size: 18px;
+                font-weight: bold;
+                text-align: left;
+            }
+
+            .line-break {
+                overflow: scroll;
+            }
+
+            .cell-titles td {
+                font-weight: bold;
+                color: #fff;
+            }
+
+            .project-name {
+                background-color: #2F5596;
+            }
+
+            .timeline {
+                background-color: #4472C4;
+            }
+
+            .timeline-child {
+                background-color: #5B9CD5;
+            }
+
+            .number-of-team-members {
+                background-color: #732DE0;
+            }
+
+            .budget {
+                background-color: #31AF4F;
+            }
+
+            .budget-child {
+                background-color: #92D050;
+            }
+
+            .risks {
+                background-color: #C01800;
+            }
+
+            .risks-child {
+                background-color: #F42100;
+            }
+
+            .open {
+                background-color: #EC7D00;
+            }
+
+            .open-child {
+                background-color: #F1B93C;
+            }
+
+            .pending-actions {
+                background-color: #BF8F00;
+            }
+        </style>
+        <table name="Extra">
+            <tr>
+                <td class="title" colspan="10">PROJECT PORTFOLIO DATA</td>
+            </tr>
+            <tr class="cell-titles">
+                <td class="project-name" rowspan="2">PROJECT NAME</td>
+                <td class="timeline" colspan="4">TIMELINE</td>
+                <td class="number-of-team-members line-break" rowspan="2">NUMBER<br />OF TEAM<br />MEMBERS</td>
+            </tr>
+            <tr class="cell-titles">
+                <td class="timeline-child">CALENDAR</td>
+                <td class="timeline-child">BEGIN</td>
+                <td class="timeline-child">FINISH</td>
+                <td class="timeline-child"># of DAYS</td>
+            </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('PROJECT PORTFOLIO DATA')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2'].v).be.eql('PROJECT NAME')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('TIMELINE')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('CALENDAR')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3'].v).be.eql('BEGIN')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('FINISH')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E3'].v).be.eql('# of DAYS')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F2'].v).be.eql('NUMBER\nOF TEAM\nMEMBERS')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(9)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(0)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(4)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.c).be.eql(5)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.c).be.eql(5)
+    })
+
+    it('should work when using special rowspan layout #11 (using rowspan and colspan in one row leaving one set of holes in cells for next row and covering more cells than the available holes)', async () => {
+      const stream = await conversion(`
+        <style>
+            * {
+                font-family: Arial;
+            }
+
+            td {
+                padding: 15px;
+                font-size: 10px;
+                text-align: center;
+            }
+
+            .title {
+                font-size: 18px;
+                font-weight: bold;
+                text-align: left;
+            }
+
+            .line-break {
+                overflow: scroll;
+            }
+
+            .cell-titles td {
+                font-weight: bold;
+                color: #fff;
+            }
+
+            .project-name {
+                background-color: #2F5596;
+            }
+
+            .timeline {
+                background-color: #4472C4;
+            }
+
+            .timeline-child {
+                background-color: #5B9CD5;
+            }
+
+            .number-of-team-members {
+                background-color: #732DE0;
+            }
+
+            .budget {
+                background-color: #31AF4F;
+            }
+
+            .budget-child {
+                background-color: #92D050;
+            }
+
+            .risks {
+                background-color: #C01800;
+            }
+
+            .risks-child {
+                background-color: #F42100;
+            }
+
+            .open {
+                background-color: #EC7D00;
+            }
+
+            .open-child {
+                background-color: #F1B93C;
+            }
+
+            .pending-actions {
+                background-color: #BF8F00;
+            }
+        </style>
+        <table name="Extra">
+            <tr>
+                <td class="title" colspan="10">PROJECT PORTFOLIO DATA</td>
+            </tr>
+            <tr class="cell-titles">
+                <td class="project-name" rowspan="2">PROJECT NAME</td>
+                <td class="timeline" colspan="4">TIMELINE</td>
+                <td class="number-of-team-members line-break" rowspan="2">NUMBER<br />OF TEAM<br />MEMBERS</td>
+            </tr>
+            <tr class="cell-titles">
+                <td class="timeline-child">CALENDAR</td>
+                <td class="timeline-child">BEGIN</td>
+                <td class="timeline-child">FINISH</td>
+                <td class="timeline-child"># of DAYS</td>
+                <td class="budget-child">PROJECTED</td>
+                <td class="budget-child">ACTUAL</td>
+            </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('PROJECT PORTFOLIO DATA')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2'].v).be.eql('PROJECT NAME')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('TIMELINE')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('CALENDAR')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3'].v).be.eql('BEGIN')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('FINISH')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E3'].v).be.eql('# of DAYS')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F2'].v).be.eql('NUMBER\nOF TEAM\nMEMBERS')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G3'].v).be.eql('PROJECTED')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H3'].v).be.eql('ACTUAL')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(9)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(0)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(4)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.c).be.eql(5)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.c).be.eql(5)
+    })
+
+    it('should work when using special rowspan layout #12 (using two rowspan and colspan in one row leaving two sets of holes in cells for next row)', async () => {
+      const stream = await conversion(`
+        <style>
+            * {
+                font-family: Arial;
+            }
+
+            td {
+                padding: 15px;
+                font-size: 10px;
+                text-align: center;
+            }
+
+            .title {
+                font-size: 18px;
+                font-weight: bold;
+                text-align: left;
+            }
+
+            .line-break {
+                overflow: scroll;
+            }
+
+            .cell-titles td {
+                font-weight: bold;
+                color: #fff;
+            }
+
+            .project-name {
+                background-color: #2F5596;
+            }
+
+            .timeline {
+                background-color: #4472C4;
+            }
+
+            .timeline-child {
+                background-color: #5B9CD5;
+            }
+
+            .number-of-team-members {
+                background-color: #732DE0;
+            }
+
+            .budget {
+                background-color: #31AF4F;
+            }
+
+            .budget-child {
+                background-color: #92D050;
+            }
+
+            .risks {
+                background-color: #C01800;
+            }
+
+            .risks-child {
+                background-color: #F42100;
+            }
+
+            .open {
+                background-color: #EC7D00;
+            }
+
+            .open-child {
+                background-color: #F1B93C;
+            }
+
+            .pending-actions {
+                background-color: #BF8F00;
+            }
+        </style>
+        <table name="Extra">
+            <tr>
+                <td class="title" colspan="10">PROJECT PORTFOLIO DATA</td>
+            </tr>
+            <tr class="cell-titles">
+                <td class="project-name" rowspan="2">PROJECT NAME</td>
+                <td class="timeline" colspan="4">TIMELINE</td>
+                <td class="number-of-team-members line-break" rowspan="2">NUMBER<br />OF TEAM<br />MEMBERS</td>
+                <td class="budget" colspan="3">BUDGET</td>
+                <td class="risks" colspan="3">RISKS</td>
+                <td class="open" colspan="2">OPEN</td>
+                <td class="pending-actions line-break" rowspan="2">PENDING<br />ACTIONS</td>
+            </tr>
+            <tr class="cell-titles">
+                <td class="timeline-child">CALENDAR</td>
+                <td class="timeline-child">BEGIN</td>
+                <td class="timeline-child">FINISH</td>
+                <td class="timeline-child"># of DAYS</td>
+                <td class="budget-child">PROJECTED</td>
+                <td class="budget-child">ACTUAL</td>
+                <td class="budget-child">REMAINDER</td>
+                <td class="risks-child">HIGH</td>
+                <td class="risks-child">MEDIUM</td>
+                <td class="risks-child">LOW</td>
+                <td class="open-child">ISSUES</td>
+                <td class="open-child">REVISIONS</td>
+            </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('PROJECT PORTFOLIO DATA')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2'].v).be.eql('PROJECT NAME')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2'].v).be.eql('TIMELINE')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('CALENDAR')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3'].v).be.eql('BEGIN')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('FINISH')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E3'].v).be.eql('# of DAYS')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F2'].v).be.eql('NUMBER\nOF TEAM\nMEMBERS')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G2'].v).be.eql('BUDGET')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G3'].v).be.eql('PROJECTED')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H3'].v).be.eql('ACTUAL')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I3'].v).be.eql('REMAINDER')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J2'].v).be.eql('RISKS')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J3'].v).be.eql('HIGH')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['K3'].v).be.eql('MEDIUM')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['L3'].v).be.eql('LOW')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['M2'].v).be.eql('OPEN')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['M3'].v).be.eql('ISSUES')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['N3'].v).be.eql('REVISIONS')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['O2'].v).be.eql('PENDING\nACTIONS')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(9)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(0)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(4)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.c).be.eql(5)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.c).be.eql(5)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.c).be.eql(6)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.c).be.eql(8)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].s.c).be.eql(9)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].e.c).be.eql(11)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].s.c).be.eql(12)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].e.c).be.eql(13)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].s.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].s.c).be.eql(14)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].e.r).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].e.c).be.eql(14)
+    })
+
     it('should be able to set fontFamily', async () => {
       const stream = await conversion(`
         <style>
