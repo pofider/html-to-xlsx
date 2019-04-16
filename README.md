@@ -18,11 +18,13 @@ const conversion = conversionFactory({
   extract: chromeEval
 })
 
-(async () => {
+async function run () {
   const stream = await conversion(`<table><tr><td>cell value</td></tr></table>`)
 
   stream.pipe(fs.createWriteStream('/path/to/output.xlsx'))
-})()
+}
+
+run()
 ```
 
 ## Supported properties
@@ -70,9 +72,11 @@ const conversion = conversionFactory({
   extract: chromeEval
 })
 
-(async () => {
+async function main () {
   const stream = await conversion(/* html */, /* extract options */)
-})()
+}
+
+main()
 ```
 
 - `html` **string** - the html source that will be transformed to an xlsx, the html should contain a table element
