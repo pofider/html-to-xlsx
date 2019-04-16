@@ -38,7 +38,7 @@ run()
 - `font-size` - font size
 - `colspan` - numeric value that merges current column with columns to the right
 - `rowspan` - numeric value that merges current row with rows below.  
-- `overflow` - the excel cell will have text wrap enabled if this is set to scoll.
+- `overflow` - the excel cell will have text wrap enabled if this is set to `scroll` or `auto`.
 
 ## Constructor options
 
