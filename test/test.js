@@ -31,26 +31,34 @@ describe('html extraction', () => {
     rmDir(tmpDir)
   })
 
+  const extractImplementation = (pageEval) => {
+    return async (html) => {
+      const htmlPath = await createHtmlFile(html)
+
+      return pageEval({
+        html: htmlPath,
+        scriptFn: extractTableScriptFn
+      })
+    }
+  }
+
   describe('chrome-strategy', () => {
-    common(chromeEval)
+    common(extractImplementation(chromeEval))
   })
 
   describe('phantom-strategy', () => {
-    common(phantomEval)
+    common(extractImplementation(phantomEval))
   })
 
   function common (pageEval) {
     it('should parse simple table', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td>1</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td>1</td>
+          </tr>
+        </table>
+      `)
 
       table.rows.should.have.length(1)
       table.rows[0].should.have.length(1)
@@ -58,16 +66,13 @@ describe('html extraction', () => {
     })
 
     it('should parse value', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td>node.js & javascript</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td>node.js & javascript</td>
+          </tr>
+        </table>
+      `)
 
       table.rows.should.have.length(1)
       table.rows[0].should.have.length(1)
@@ -75,16 +80,13 @@ describe('html extraction', () => {
     })
 
     it('should parse un-escaped value', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td>node.js & javascript</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td>node.js & javascript</td>
+          </tr>
+        </table>
+      `)
 
       table.rows.should.have.length(1)
       table.rows[0].should.have.length(1)
@@ -92,20 +94,17 @@ describe('html extraction', () => {
     })
 
     it('should parse cell data type', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td data-cell-type="number">10</td>
-              <td data-cell-type="boolean">1</td>
-              <td data-cell-type="date">2019-01-22</td>
-              <td data-cell-type="datetime">2019-01-22T17:31:36.242Z</td>
-              <td data-cell-type="formula">=SUM(A1, B1)</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td data-cell-type="number">10</td>
+            <td data-cell-type="boolean">1</td>
+            <td data-cell-type="date">2019-01-22</td>
+            <td data-cell-type="datetime">2019-01-22T17:31:36.242Z</td>
+            <td data-cell-type="formula">=SUM(A1, B1)</td>
+          </tr>
+        </table>
+      `)
 
       table.rows.should.have.length(1)
       table.rows[0].should.have.length(5)
@@ -117,17 +116,14 @@ describe('html extraction', () => {
     })
 
     it('should parse format str and enum', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td data-cell-type="number" data-cell-format-str="0.00">10</td>
-              <td data-cell-type="number" data-cell-format-enum="3">100000</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td data-cell-type="number" data-cell-format-str="0.00">10</td>
+            <td data-cell-type="number" data-cell-format-enum="3">100000</td>
+          </tr>
+        </table>
+      `)
 
       table.rows.should.have.length(1)
       table.rows[0][0].formatStr = '0.00'
@@ -135,96 +131,69 @@ describe('html extraction', () => {
     })
 
     it('should parse background color', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='background-color:red'>1</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td style='background-color:red'>1</td></tr></table>`)
 
       table.rows[0][0].backgroundColor[0].should.be.eql('255')
     })
 
     it('should parse foregorund color', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='color:red'>1</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td style='color:red'>1</td></tr></table>`)
 
       table.rows[0][0].foregroundColor[0].should.be.eql('255')
     })
 
     it('should parse fontFamily', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td style='font-family:Calibri'>1</td>
-              <td style='font-family: "Times New Roman"'>2</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td style='font-family:Calibri'>1</td>
+            <td style='font-family: "Times New Roman"'>2</td>
+          </tr>
+        </table>
+      `)
 
       table.rows[0][0].fontFamily.should.be.eql('Calibri')
       table.rows[0][1].fontFamily.should.be.eql('Times New Roman')
     })
 
     it('should parse fontsize', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='font-size:19px'>1</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td style='font-size:19px'>1</td></tr></table>`)
 
       table.rows[0][0].fontSize.should.be.eql('19px')
     })
 
     it('should parse verticalAlign', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='vertical-align:bottom'>1</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td style='vertical-align:bottom'>1</td></tr></table>`)
 
       table.rows[0][0].verticalAlign.should.be.eql('bottom')
     })
 
     it('should parse horizontal align', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='text-align:left'>1</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td style='text-align:left'>1</td></tr></table>`)
 
       table.rows[0][0].horizontalAlign.should.be.eql('left')
     })
 
     it('should parse width', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='width:19px'>1</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td style='width:19px'>1</td></tr></table>`)
 
       table.rows[0][0].width.should.be.ok()
     })
 
     it('should parse height', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='height:19px'>1</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td style='height:19px'>1</td></tr></table>`)
 
       table.rows[0][0].height.should.be.ok()
     })
 
     it('should parse border', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td style='border-style:solid;'>1</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td style='border-style:solid;'>1</td>
+          </tr>
+        </table>
+      `)
 
       table.rows[0][0].border.left.should.be.eql('solid')
       table.rows[0][0].border.right.should.be.eql('solid')
@@ -233,16 +202,13 @@ describe('html extraction', () => {
     })
 
     it('should parse complex border', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td style='border-left: 1px solid red;'>1</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td style='border-left: 1px solid red;'>1</td>
+          </tr>
+        </table>
+      `)
 
       table.rows[0][0].border.leftColor.should.be.eql(['255', '0', '0'])
       table.rows[0][0].border.leftWidth.should.be.eql('1px')
@@ -250,36 +216,27 @@ describe('html extraction', () => {
     })
 
     it('should parse overflow', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td style='overflow:scroll;'>1234567789012345678912457890</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td style='overflow:scroll;'>1234567789012345678912457890</td></tr></table>`)
 
       table.rows[0][0].wrapText.should.be.eql('scroll')
     })
 
     it('should parse textDecoration', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td style='text-decoration: underline'>
-                1234
-              </td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td style='text-decoration: underline'>
+              1234
+            </td>
+          </tr>
+        </table>
+      `)
 
       table.rows[0][0].textDecoration.line.should.be.eql('underline')
     })
 
     it('should parse backgroud color from styles with line endings', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<style> td { \n background-color: red \n } </style><table><tr><td>1</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<style> td { \n background-color: red \n } </style><table><tr><td>1</td></tr></table>`)
 
       table.rows[0][0].backgroundColor[0].should.be.eql('255')
     })
@@ -291,29 +248,20 @@ describe('html extraction', () => {
         rows += '<tr><td>1</td></tr>'
       }
 
-      const table = await pageEval({
-        html: await createHtmlFile(`<table>${rows}</table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table>${rows}</table>`)
 
       table.rows.should.have.length(10000)
     })
 
     it('should parse colspan', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td colspan='6'></td><td>Column 7</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td colspan='6'></td><td>Column 7</td></tr></table>`)
 
       table.rows[0][0].colspan.should.be.eql(6)
       table.rows[0][1].value.should.be.eql('Column 7')
     })
 
     it('should parse rowspan', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`<table><tr><td rowspan='2'>Col 1</td><td>Col 2</td></tr></table>`),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`<table><tr><td rowspan='2'>Col 1</td><td>Col 2</td></tr></table>`)
 
       table.rows[0][0].rowspan.should.be.eql(2)
       table.rows[0][0].value.should.be.eql('Col 1')
@@ -321,27 +269,24 @@ describe('html extraction', () => {
     })
 
     it('should parse complex rowspan', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <td rowspan='3'>Row 1 Col 1</td>
-              <td>Row 1 Col 2</td>
-              <td>Row 1 Col 3</td>
-              <td>Row 1 Col 4</td>
-            </tr>
-            <tr>
-              <td rowspan='2'>Row 2 Col 1</td>
-              <td rowspan='2'>Row 2 Col 2</td>
-              <td>Row 2 Col 3</td>
-            </tr>
-            <tr>
-              <td>Row 3 Col 3</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <td rowspan='3'>Row 1 Col 1</td>
+            <td>Row 1 Col 2</td>
+            <td>Row 1 Col 3</td>
+            <td>Row 1 Col 4</td>
+          </tr>
+          <tr>
+            <td rowspan='2'>Row 2 Col 1</td>
+            <td rowspan='2'>Row 2 Col 2</td>
+            <td>Row 2 Col 3</td>
+          </tr>
+          <tr>
+            <td>Row 3 Col 3</td>
+          </tr>
+        </table>
+      `)
 
       table.rows[0][0].rowspan.should.be.eql(3)
       table.rows[0][0].value.should.be.eql('Row 1 Col 1')
@@ -349,21 +294,18 @@ describe('html extraction', () => {
     })
 
     it('should parse th elements', async () => {
-      const table = await pageEval({
-        html: await createHtmlFile(`
-          <table>
-            <tr>
-              <th>col1</th>
-              <th>col2</th>
-            </tr>
-            <tr>
-              <td>1</td>
-              <td>2</td>
-            </tr>
-          </table>
-        `),
-        scriptFn: extractTableScriptFn
-      })
+      const table = await pageEval(`
+        <table>
+          <tr>
+            <th>col1</th>
+            <th>col2</th>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td>2</td>
+          </tr>
+        </table>
+      `)
 
       table.rows.should.have.length(2)
       table.rows[0][0].value.should.be.eql('col1')
@@ -375,11 +317,35 @@ describe('html extraction', () => {
 })
 
 describe('html to xlsx conversion with strategy', () => {
+  const extractImplementation = (pageEval) => {
+    return async ({ html, ...restOptions }) => {
+      const htmlPath = await createHtmlFile(html)
+
+      const result = await pageEval({
+        ...restOptions,
+        html: htmlPath,
+        scriptFn: extractTableScriptFn
+      })
+
+      const tables = Array.isArray(result) ? result : [result]
+
+      return tables.map((table) => ({
+        name: table.name,
+        getRows: async (rowCb) => {
+          table.rows.forEach((row) => {
+            rowCb(row)
+          })
+        },
+        rowsCount: table.rows.length
+      }))
+    }
+  }
+
   describe('chrome-strategy', () => {
-    commonConversion(chromeEval)
+    commonConversion(extractImplementation(chromeEval))
   })
   describe('phantom-strategy', () => {
-    commonConversion(phantomEval)
+    commonConversion(extractImplementation(phantomEval))
   })
 
   function commonConversion (pageEval) {
@@ -430,7 +396,7 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.SheetNames[0]).be.eql('Sheet1')
     })
 
-    it('shoule be able to set custom sheet name', async () => {
+    it('should be able to set custom sheet name', async () => {
       const parseXlsx = (xlsxStream) => {
         return new Promise((resolve, reject) => {
           const bufs = []

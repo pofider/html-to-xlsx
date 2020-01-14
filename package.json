@@ -32,10 +32,11 @@
     }
   },
   "dependencies": {
+    "exceljs": "3.5.0",
     "moment": "2.22.1",
+    "p-each-series": "2.1.0",
     "tinycolor2": "1.4.1",
-    "uuid": "3.2.1",
-    "xlsx-populate": "1.18.0"
+    "uuid": "3.2.1"
   },
   "devDependencies": {
     "babel-eslint": "8.2.2",

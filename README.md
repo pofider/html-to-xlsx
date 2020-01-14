@@ -10,12 +10,37 @@ Transformation only supports html table and several basic style properties. No i
 ## Usage
 
 ```js
+const util = require('util')
 const fs = require('fs')
 const conversionFactory = require('html-to-xlsx')
 const puppeteer = require('puppeteer')
 const chromeEval = require('chrome-page-eval')({ puppeteer })
+const writeFileAsync = util.promisify(fs.writeFile)
+
 const conversion = conversionFactory({
-  extract: chromeEval
+  extract: async ({ html, ...restOptions }) => {
+    const tmpHtmlPath = path.join('/path/to/temp', 'input.html')
+
+    await writeFileAsync(tmpHtmlPath, html)
+
+    const result = await chromeEval({
+      ...restOptions,
+      html: tmpHtmlPath,
+      scriptFn: conversionFactory.getScriptFn()
+    })
+
+    const tables = Array.isArray(result) ? result : [result]
+
+    return tables.map((table) => ({
+      name: table.name,
+      getRows: async (rowCb) => {
+        table.rows.forEach((row) => {
+          rowCb(row)
+        })
+      },
+      rowsCount: table.rows.length
+    }))
+  }
 })
 
 async function run () {
@@ -69,7 +94,29 @@ const conversionFactory = require('html-to-xlsx')
 const puppeteer = require('puppeteer')
 const chromeEval = require('chrome-page-eval')({ puppeteer })
 const conversion = conversionFactory({
-  extract: chromeEval
+  extract: async ({ html, ...restOptions }) => {
+    const tmpHtmlPath = path.join('/path/to/temp', 'input.html')
+
+    await writeFileAsync(tmpHtmlPath, html)
+
+    const result = await chromeEval({
+      ...restOptions,
+      html: tmpHtmlPath,
+      scriptFn: conversionFactory.getScriptFn()
+    })
+
+    const tables = Array.isArray(result) ? result : [result]
+
+    return tables.map((table) => ({
+      name: table.name,
+      getRows: async (rowCb) => {
+        table.rows.forEach((row) => {
+          rowCb(row)
+        })
+      },
+      rowsCount: table.rows.length
+    }))
+  }
 })
 
 async function main () {
