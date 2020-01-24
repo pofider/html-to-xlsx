@@ -1757,7 +1757,8 @@ describe('html to xlsx conversion with strategy', () => {
       stream.on('data', (d) => { bufs.push(d) })
       stream.on('end', () => {
         const buf = Buffer.concat(bufs)
-        xlsx.read(buf).Strings[0].t.should.be.eql('hello')
+        const doc = xlsx.read(buf)
+        doc.Sheets.Sheet1.A1.v.should.be.eql('hello')
       })
     })
 
@@ -1778,7 +1779,8 @@ describe('html to xlsx conversion with strategy', () => {
         stream.on('end', () => {
           try {
             const buf = Buffer.concat(bufs)
-            xlsx.read(buf).Strings[0].t.should.be.eql('& &')
+            const doc = xlsx.read(buf)
+            doc.Sheets.Sheet1.A1.v.should.be.eql('& &')
             resolve()
           } catch (e) {
             reject(e)
