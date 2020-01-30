@@ -34,7 +34,6 @@
   "dependencies": {
     "exceljs": "github:jsreport/exceljs",
     "moment": "2.22.1",
-    "p-each-series": "2.1.0",
     "tinycolor2": "1.4.1",
     "uuid": "3.2.1"
   },
