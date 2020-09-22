@@ -32,7 +32,7 @@
     }
   },
   "dependencies": {
-    "jsreport-exceljs": "3.7.0",
+    "jsreport-exceljs": "github:jsreport/exceljs",
     "moment": "2.22.1",
     "tinycolor2": "1.4.1",
     "uuid": "3.2.1"

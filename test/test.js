@@ -10,6 +10,7 @@ const puppeteer = require('puppeteer')
 const phantomPath = require('phantomjs').path
 const tmpDir = path.join(__dirname, 'temp')
 
+const readFileAsync = util.promisify(fs.readFile)
 const writeFileAsync = util.promisify(fs.writeFile)
 
 const extractTableScriptFn = fs.readFileSync(
@@ -1793,6 +1794,278 @@ describe('html to xlsx conversion with strategy', () => {
       return (
         conversion('<table><tr>Hello</tr></table>')
       ).should.be.rejected()
+    })
+
+    it('should work with base template and keep existing sheet', async () => {
+      const baseTemplateBuf = await readFileAsync(path.join(__dirname, 'base.xlsx'))
+
+      const stream = await conversion(`
+        <table name="Main">
+          <tr>
+            <td>
+              a
+            </td>
+          </tr>
+        </table>
+      `, {}, baseTemplateBuf)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      parsedXlsx.SheetNames.includes('Base').should.be.True()
+
+      parsedXlsx.Sheets.Base.A1.v.should.be.eql(1)
+      parsedXlsx.Sheets.Base.B1.v.should.be.eql(2)
+      parsedXlsx.Sheets.Base.C1.v.should.be.eql(3)
+
+      parsedXlsx.SheetNames.includes('Another').should.be.True()
+
+      parsedXlsx.Sheets.Another.A1.v.should.be.eql(4)
+      parsedXlsx.Sheets.Another.B1.v.should.be.eql(5)
+      parsedXlsx.Sheets.Another.C1.v.should.be.eql(6)
+    })
+
+    it('should work with base template and add sheet', async () => {
+      const baseTemplateBuf = await readFileAsync(path.join(__dirname, 'base.xlsx'))
+
+      const stream = await conversion(`
+        <table name="Main">
+          <tr>
+            <td>
+              foo
+            </td>
+            <td>
+              bar
+            </td>
+          </tr>
+        </table>
+      `, {}, baseTemplateBuf)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      parsedXlsx.SheetNames.includes('Base').should.be.True()
+      parsedXlsx.SheetNames.includes('Another').should.be.True()
+
+      parsedXlsx.SheetNames.includes('Main').should.be.True()
+
+      parsedXlsx.Sheets.Main.A1.v.should.be.eql('foo')
+      parsedXlsx.Sheets.Main.B1.v.should.be.eql('bar')
+    })
+
+    it('should work with base template and replace sheet', async () => {
+      const baseTemplateBuf = await readFileAsync(path.join(__dirname, 'base.xlsx'))
+
+      const stream = await conversion(`
+        <table name="Another">
+          <tr>
+            <td>
+              foo
+            </td>
+            <td>
+              bar
+            </td>
+          </tr>
+        </table>
+      `, {}, baseTemplateBuf)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      parsedXlsx.SheetNames.includes('Base').should.be.True()
+
+      parsedXlsx.SheetNames.includes('Another').should.be.True()
+
+      parsedXlsx.Sheets.Another.A1.v.should.be.eql('foo')
+      parsedXlsx.Sheets.Another.B1.v.should.be.eql('bar')
+    })
+
+    it('should work with base template and add multiple sheets', async () => {
+      const baseTemplateBuf = await readFileAsync(path.join(__dirname, 'base.xlsx'))
+
+      const stream = await conversion(`
+        <table name="Data">
+          <tr>
+            <td>
+              foo
+            </td>
+            <td>
+              bar
+            </td>
+          </tr>
+        </table>
+        <table name="Data1">
+          <tr>
+            <td>
+              foo2
+            </td>
+            <td>
+              bar2
+            </td>
+          </tr>
+        </table>
+        <table name="Data2">
+          <tr>
+            <td>
+              foo3
+            </td>
+            <td>
+              bar3
+            </td>
+          </tr>
+        </table>
+      `, {}, baseTemplateBuf)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      parsedXlsx.SheetNames.includes('Base').should.be.True()
+      parsedXlsx.SheetNames.includes('Another').should.be.True()
+
+      parsedXlsx.SheetNames.includes('Data').should.be.True()
+
+      parsedXlsx.Sheets.Data.A1.v.should.be.eql('foo')
+      parsedXlsx.Sheets.Data.B1.v.should.be.eql('bar')
+
+      parsedXlsx.SheetNames.includes('Data1').should.be.True()
+
+      parsedXlsx.Sheets.Data1.A1.v.should.be.eql('foo2')
+      parsedXlsx.Sheets.Data1.B1.v.should.be.eql('bar2')
+
+      parsedXlsx.SheetNames.includes('Data2').should.be.True()
+
+      parsedXlsx.Sheets.Data2.A1.v.should.be.eql('foo3')
+      parsedXlsx.Sheets.Data2.B1.v.should.be.eql('bar3')
+    })
+
+    it('should work with base template and add and replace multiple sheets', async () => {
+      const baseTemplateBuf = await readFileAsync(path.join(__dirname, 'base.xlsx'))
+
+      const stream = await conversion(`
+        <table name="Base">
+          <tr>
+            <td>
+              6
+            </td>
+            <td>
+              7
+            </td>
+          </tr>
+        </table>
+        <table name="Another">
+          <tr>
+            <td>
+              8
+            </td>
+            <td>
+              9
+            </td>
+          </tr>
+        </table>
+        <table name="Data">
+          <tr>
+            <td>
+              foo
+            </td>
+            <td>
+              bar
+            </td>
+          </tr>
+        </table>
+        <table name="Data1">
+          <tr>
+            <td>
+              foo2
+            </td>
+            <td>
+              bar2
+            </td>
+          </tr>
+        </table>
+        <table name="Data2">
+          <tr>
+            <td>
+              foo3
+            </td>
+            <td>
+              bar3
+            </td>
+          </tr>
+        </table>
+      `, {}, baseTemplateBuf)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      parsedXlsx.SheetNames.includes('Base').should.be.True()
+
+      parsedXlsx.Sheets.Base.A1.v.should.be.eql('6')
+      parsedXlsx.Sheets.Base.B1.v.should.be.eql('7')
+
+      parsedXlsx.SheetNames.includes('Another').should.be.True()
+
+      parsedXlsx.Sheets.Another.A1.v.should.be.eql('8')
+      parsedXlsx.Sheets.Another.B1.v.should.be.eql('9')
+
+      parsedXlsx.SheetNames.includes('Data').should.be.True()
+
+      parsedXlsx.Sheets.Data.A1.v.should.be.eql('foo')
+      parsedXlsx.Sheets.Data.B1.v.should.be.eql('bar')
+
+      parsedXlsx.SheetNames.includes('Data1').should.be.True()
+
+      parsedXlsx.Sheets.Data1.A1.v.should.be.eql('foo2')
+      parsedXlsx.Sheets.Data1.B1.v.should.be.eql('bar2')
+
+      parsedXlsx.SheetNames.includes('Data2').should.be.True()
+
+      parsedXlsx.Sheets.Data2.A1.v.should.be.eql('foo3')
+      parsedXlsx.Sheets.Data2.B1.v.should.be.eql('bar3')
     })
   }
 })
