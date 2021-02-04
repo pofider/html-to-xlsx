@@ -345,6 +345,7 @@ describe('html to xlsx conversion with strategy', () => {
   describe('chrome-strategy', () => {
     commonConversion(extractImplementation(chromeEval))
   })
+
   describe('phantom-strategy', () => {
     commonConversion(extractImplementation(phantomEval))
   })
@@ -1137,7 +1138,7 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
     })
 
-    it('should work when using special rowspan layout #10 (using rowspan and colspan in one row leaving some hole in cells for next row)', async () => {
+    it('should work when using special rowspan layout #10 (using rowspan and colspan in one row leaving a hole in cells for next row)', async () => {
       const stream = await conversion(`
         <style>
             * {
@@ -1590,6 +1591,248 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].s.c).be.eql(14)
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].e.r).be.eql(2)
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].e.c).be.eql(14)
+    })
+
+    it('should work when using special rowspan layout #13 (using multiple rowspan in one row and then continuing with cells in next row)', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <th rowspan="2">Date</th>
+            <th rowspan="2">info1 </th>
+            <th colspan="2">group1</th>
+            <th colspan="2">group2</th>
+            <th rowspan="2">info8</th>
+            <th rowspan="2">info9</th>
+            <th rowspan="2">info10</th>
+            <th rowspan="2">info11</th>
+          </tr>
+          <tr>
+            <th>test1</th>
+            <th>test2</th>
+            <th>test3</th>
+            <th>test4</th>
+          </tr>
+          <tr>
+            <td>01022021</td>
+            <td>i1</td>
+            <td>g11</td>
+            <td>g12</td>
+            <td>g21</td>
+            <td>g22</td>
+            <td>i8</td>
+            <td>i9</td>
+            <td>i10</td>
+            <td>i11</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Date')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3'].v).be.eql('01022021')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('info1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('i1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('group1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('test1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3'].v).be.eql('g11')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('test2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('g12')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.eql('group2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E2'].v).be.eql('test3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E3'].v).be.eql('g21')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F2'].v).be.eql('test4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F3'].v).be.eql('g22')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G1'].v).be.eql('info8')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G3'].v).be.eql('i8')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H1'].v).be.eql('info9')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H3'].v).be.eql('i9')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I1'].v).be.eql('info10')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I3'].v).be.eql('i10')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J1'].v).be.eql('info11')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J3'].v).be.eql('i11')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(3)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.c).be.eql(4)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.c).be.eql(5)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.c).be.eql(6)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.c).be.eql(6)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].s.c).be.eql(7)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].e.c).be.eql(7)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].s.c).be.eql(8)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].e.c).be.eql(8)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].s.c).be.eql(9)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].e.c).be.eql(9)
+    })
+
+    it('should work when using special rowspan layout #14 (using multiple rowspan and colspan in one row leaving holes in cells for next row)', async () => {
+      const stream = await conversion(`
+        <table>
+          <tr>
+            <th rowspan="2">Date</th>
+            <th rowspan="2">info1 </th>
+            <th colspan="2">group1</th>
+            <th colspan="2">group2</th>
+            <th rowspan="2">info8</th>
+            <th rowspan="2">info9</th>
+            <th colspan="2">group3</th>
+            <th rowspan="2">info11</th>
+          </tr>
+          <tr>
+            <th>test1</th>
+            <th>test2</th>
+            <th>test3</th>
+            <th>test4</th>
+            <th>test5</th>
+            <th>test6</th>
+          </tr>
+          <tr>
+            <td>01022021</td>
+            <td>i1</td>
+            <td>g11</td>
+            <td>g12</td>
+            <td>g21</td>
+            <td>g22</td>
+            <td>i8</td>
+            <td>i9</td>
+            <td>g31</td>
+            <td>g32</td>
+            <td>i11</td>
+          </tr>
+        </table>
+      `)
+
+      const parsedXlsx = await new Promise((resolve, reject) => {
+        const bufs = []
+
+        stream.on('error', reject)
+        stream.on('data', (d) => { bufs.push(d) })
+
+        stream.on('end', () => {
+          const buf = Buffer.concat(bufs)
+          resolve(xlsx.read(buf))
+        })
+      })
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A1'].v).be.eql('Date')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['A3'].v).be.eql('01022021')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B1'].v).be.eql('info1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['B3'].v).be.eql('i1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C1'].v).be.eql('group1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C2'].v).be.eql('test1')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['C3'].v).be.eql('g11')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D2'].v).be.eql('test2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['D3'].v).be.eql('g12')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E1'].v).be.eql('group2')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E2'].v).be.eql('test3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['E3'].v).be.eql('g21')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F2'].v).be.eql('test4')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['F3'].v).be.eql('g22')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G1'].v).be.eql('info8')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['G3'].v).be.eql('i8')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H1'].v).be.eql('info9')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['H3'].v).be.eql('i9')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I1'].v).be.eql('group3')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I2'].v).be.eql('test5')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['I3'].v).be.eql('g31')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J1']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J2'].v).be.eql('test6')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['J3'].v).be.eql('g32')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['K1'].v).be.eql('info11')
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['K2']).be.undefined()
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['K3'].v).be.eql('i11')
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].s.c).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][0].e.c).be.eql(0)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].s.c).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][1].e.c).be.eql(1)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].s.c).be.eql(2)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][2].e.c).be.eql(3)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].s.c).be.eql(4)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][3].e.c).be.eql(5)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].s.c).be.eql(6)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][4].e.c).be.eql(6)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].s.c).be.eql(7)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][5].e.c).be.eql(7)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].s.c).be.eql(8)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].e.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][6].e.c).be.eql(9)
+
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].s.r).be.eql(0)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].s.c).be.eql(10)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].e.r).be.eql(1)
+      should(parsedXlsx.Sheets[parsedXlsx.SheetNames[0]]['!merges'][7].e.c).be.eql(10)
     })
 
     it('should be able to set fontFamily', async () => {
