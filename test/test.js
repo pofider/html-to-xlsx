@@ -2123,18 +2123,6 @@ describe('html to xlsx conversion with strategy', () => {
       should(parsedXlsx.Sheets[parsedXlsx.SheetNames[1]].D1.v).be.eql('4')
     })
 
-    it('should callback error when input contains invalid characters', async () => {
-      return (
-        conversion(`
-          <table>
-            <tr>
-              <td></td>
-            </tr>
-          </table>
-        `)
-      ).should.be.rejected()
-    })
-
     it('should be able to parse xlsx', async () => {
       const stream = await conversion('<table><tr><td>hello</td></tr>')
 
@@ -2146,6 +2134,31 @@ describe('html to xlsx conversion with strategy', () => {
         const doc = xlsx.read(buf)
         doc.Sheets.Sheet1.A1.v.should.be.eql('hello')
       })
+    })
+
+    it('should be able to process emoji xlsx', async () => {
+      const stream = await conversion('<table><tr><td>hello 😃</td></tr>')
+
+      const bufs = []
+
+      stream.on('data', (d) => { bufs.push(d) })
+      stream.on('end', () => {
+        const buf = Buffer.concat(bufs)
+        const doc = xlsx.read(buf)
+        doc.Sheets.Sheet1.A1.v.should.be.eql('hello 😃')
+      })
+    })
+
+    it('should not error when input contains invalid characters', async () => {
+      return (
+        conversion(`
+          <table>
+            <tr>
+              <td></td>
+            </tr>
+          </table>
+        `)
+      ).should.be.not.rejected()
     })
 
     it('should translate ampersands', async () => {
