@@ -26,18 +26,18 @@
   },
   "dependencies": {
     "jsreport-exceljs": "3.8.0",
-    "moment": "2.29.1",
-    "tinycolor2": "1.4.1",
+    "moment": "2.29.3",
+    "tinycolor2": "1.4.2",
     "uuid": "8.3.2"
   },
   "devDependencies": {
     "chrome-page-eval": "1.3.0",
-    "phantom-page-eval": "1.2.0",
+    "mocha": "10.0.0",
+    "phantom-page-eval": "2.0.0",
     "phantomjs": "2.1.7",
-    "mocha": "5.0.2",
     "puppeteer": "9.1.1",
-    "should": "13.2.1",
-    "standard": "16.0.3",
+    "should": "13.2.3",
+    "standard": "17.0.0",
     "xlsx": "0.12.4"
   },
   "engines": {
