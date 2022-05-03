@@ -357,7 +357,7 @@ describe('html to xlsx conversion with strategy', () => {
       rmDir(tmpDir)
 
       conversion = require('../')({
-        tmpDir: tmpDir,
+        tmpDir,
         extract: pageEval
       })
     })

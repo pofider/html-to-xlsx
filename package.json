@@ -1,6 +1,6 @@
 {
   "name": "html-to-xlsx",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Convert html to xlsx",
   "keywords": [
     "html",
@@ -44,10 +44,7 @@
     "node": ">=8.9"
   },
   "standard": {
-    "env": {
-      "node": true,
-      "mocha": true
-    },
+    "env": ["node", "mocha"],
     "ignore": [
       "lib/scripts/conversionScript.js"
     ]
