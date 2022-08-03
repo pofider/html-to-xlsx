@@ -62,7 +62,7 @@ run()
 - `height` - the excel row will get the highest height
 - `font-size` - font size
 - `colspan` - numeric value that merges current column with columns to the right
-- `rowspan` - numeric value that merges current row with rows below.  
+- `rowspan` - numeric value that merges current row with rows below.
 - `overflow` - the excel cell will have text wrap enabled if this is set to `scroll` or `auto`.
 
 ## Constructor options
