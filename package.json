@@ -1,6 +1,6 @@
 {
   "name": "html-to-xlsx",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Convert html to xlsx",
   "keywords": [
     "html",
